@@ -1,0 +1,10 @@
+0|page|/|index||Home
+1|page|/about.html|about||About
+0|page|/product.html|product||Product
+1|page|/terms.html|terms||Terms
+1|tag|~^/tag/([a-zA-Z0-9]+)$~||getTagPage|Tag
+1|search|~^/search$~||getSearchPage|Search
+1|article|~^/article/([a-zA-Z0-9]{13})\.html$~||getArticlePage|Article
+0|category|~^/category/([a-zA-Z0-9]+)$~||getCategoryPage|Category
+0|news|~^/news/([a-zA-Z0-9]+)$~||getNewsPage|News
+0|info|~^/info/([a-zA-Z0-9]{13})\.html$~||getInfoPage|Info
