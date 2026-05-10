@@ -1,0 +1,8 @@
+<?php
+$sysLevelOpts = [
+    10 => 'Observer',
+    11 => 'Editor',
+    12 => 'Supervisor',
+    15 => 'Admin',
+    20 => 'Super Admin',
+];
