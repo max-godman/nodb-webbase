@@ -1,0 +1,218 @@
+<?php
+/**
+ * MySQL Database Table Creation Script
+ * 
+ * For system initialization or setup program calls
+ * 
+ * @package NoDB-WebBase
+ * @since 2026-05-07
+ * 
+ * Usage:
+ *   include 'sql.log';
+ *   $result = createAllTables($pdo);
+ *   if ($result['success']) {
+ *       echo 'All tables created successfully';
+ *   } else {
+ *       echo 'Creation failed: ' . $result['error'];
+ *   }
+ */
+
+/**
+ * Get all table creation SQL statements
+ * 
+ * @return array table name => SQL statement
+ */
+function getCreateTableSql() {
+    $sql = [];
+    
+    // 01. test - Test Table
+    $sql['test'] = "CREATE TABLE IF NOT EXISTS test (
+        id INT NOT NULL AUTO_INCREMENT,
+        title VARCHAR(255) NULL COMMENT 'title',
+        about TEXT NULL COMMENT 'description',
+        dtd DATETIME NULL COMMENT 'create time',
+        click INT NULL DEFAULT 0 COMMENT 'click count',
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='test table'";
+    
+    return $sql;
+}
+
+/**
+ * Create single table
+ * 
+ * @param PDO $pdo PDO connection instance
+ * @param string $tableName Table name
+ * @param string $sql CREATE TABLE SQL statement
+ * @return array Result array ['success' => bool, 'message' => string, 'error' => string]
+ */
+function createSingleTable($pdo, $tableName, $sql) {
+    try {
+        $pdo->exec($sql);
+        return [
+            'success' => true,
+            'message' => "Table {$tableName} created successfully",
+            'error' => ''
+        ];
+    } catch (PDOException $e) {
+        if (strpos($e->getMessage(), 'already exists') !== false || 
+            strpos($e->getMessage(), '1050') !== false) {
+            return [
+                'success' => true,
+                'message' => "Table {$tableName} already exists",
+                'error' => ''
+            ];
+        }
+        return [
+            'success' => false,
+            'message' => "Table {$tableName} creation failed",
+            'error' => $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Create all tables
+ * 
+ * @param PDO $pdo PDO connection instance
+ * @return array Result array
+ *   [
+ *       'success' => bool,       // Whether all succeeded
+ *       'total' => int,          // Total number of tables
+ *       'created' => int,        // Number of tables created
+ *       'failed' => int,         // Number of tables failed
+ *       'details' => array,      // Details for each table
+ *       'error' => string        // First error message (if any)
+ *   ]
+ */
+function createAllTables($pdo) {
+    $sqls = getCreateTableSql();
+    $result = [
+        'success' => true,
+        'total' => count($sqls),
+        'created' => 0,
+        'failed' => 0,
+        'details' => [],
+        'error' => ''
+    ];
+    
+    foreach ($sqls as $tableName => $sql) {
+        $tableResult = createSingleTable($pdo, $tableName, $sql);
+        $result['details'][$tableName] = $tableResult;
+        
+        if ($tableResult['success']) {
+            $result['created']++;
+        } else {
+            $result['failed']++;
+            if ($result['success']) {
+                $result['success'] = false;
+                $result['error'] = $tableResult['error'];
+            }
+        }
+    }
+    
+    return $result;
+}
+
+/**
+ * Check if table exists
+ * 
+ * @param PDO $pdo PDO connection instance
+ * @param string $tableName Table name
+ * @return bool Whether exists
+ */
+function tableExists($pdo, $tableName) {
+    try {
+        $stmt = $pdo->prepare("SHOW TABLES LIKE ?");
+        $stmt->execute([$tableName]);
+        return $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+/**
+ * Get list of existing tables
+ * 
+ * @param PDO $pdo PDO connection instance
+ * @return array Existing table names
+ */
+function getExistingTables($pdo) {
+    $tables = [];
+    $sqls = getCreateTableSql();
+    
+    foreach (array_keys($sqls) as $tableName) {
+        if (tableExists($pdo, $tableName)) {
+            $tables[] = $tableName;
+        }
+    }
+    
+    return $tables;
+}
+
+/**
+ * Drop table (use with caution)
+ * 
+ * @param PDO $pdo PDO connection instance
+ * @param string $tableName Table name
+ * @return array Result array
+ */
+function dropTable($pdo, $tableName) {
+    try {
+        $pdo->exec("DROP TABLE IF EXISTS {$tableName}");
+        return [
+            'success' => true,
+            'message' => "Table {$tableName} dropped"
+        ];
+    } catch (PDOException $e) {
+        return [
+            'success' => false,
+            'message' => "Failed to drop table {$tableName}",
+            'error' => $e->getMessage()
+        ];
+    }
+}
+
+// ========================================
+// Usage Examples
+// ========================================
+
+/*
+// Example 1: Create all tables
+require_once 'sql.log';
+
+try {
+    $pdo = new PDO('mysql:host=localhost;dbname=your_db;charset=utf8mb4', 'username', 'password');
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    $result = createAllTables($pdo);
+    
+    if ($result['success']) {
+        echo "Success! Created {$result['created']}/{$result['total']} tables\n";
+    } else {
+        echo "Failed! {$result['failed']} tables failed\n";
+        echo "Error: " . $result['error'] . "\n";
+    }
+    
+    // Output details
+    foreach ($result['details'] as $table => $detail) {
+        echo "[{$table}] {$detail['message']}\n";
+    }
+    
+} catch (PDOException $e) {
+    echo "Database connection failed: " . $e->getMessage();
+}
+
+// Example 2: Create single table
+$result = createSingleTable($pdo, 'test', getCreateTableSql()['test']);
+echo $result['message'];
+
+// Example 3: Check if table exists
+if (tableExists($pdo, 'test')) {
+    echo 'test table exists';
+}
+
+// Example 4: Get existing tables
+$existing = getExistingTables($pdo);
+print_r($existing);
+*/
