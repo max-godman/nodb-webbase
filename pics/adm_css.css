@@ -1,0 +1,499 @@
+/**
+ * Admin Panel Stylesheet
+ *
+ * Core principle: single file, no dependencies, responsive
+ *
+ * NoDB-WebBase
+ * GitHub: https://github.com/max-godman
+ */
+
+/* ========================================
+   1. Base Reset & Variables
+   ======================================== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --primary: #667eea;
+    --primary-dark: #5a67d8;
+    --secondary: #764ba2;
+    --bg-body: #f5f7fa;
+    --bg-card: #fff;
+    --text-main: #2d3748;
+    --text-muted: #718096;
+    --border: #e2e8f0;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-hover: 0 4px 16px rgba(0,0,0,0.12);
+    --radius: 8px;
+    --max-width: 1200px;
+    --header-height: 56px;
+    --menu-bg: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+}
+
+html { font-size: 16px; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg-body);
+    color: var(--text-main);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ========================================
+   2. Header Bar
+   ======================================== */
+.topbar {
+    background: var(--menu-bg);
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.topbar-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+}
+
+/* Logo */
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo a {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo a:hover { opacity: 0.9; }
+
+.logo-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+/* Desktop Menu */
+.nav-desktop { display: flex; align-items: center; gap: 4px; }
+
+.nav-desktop a {
+    color: rgba(255,255,255,0.9);
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.nav-desktop a:hover {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Logout */
+.logout-btn {
+    color: rgba(255,255,255,0.9);
+    padding: 6px 14px;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    margin-left: 10px;
+}
+
+.logout-btn:hover {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Mobile Menu Toggle */
+.menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+/* ========================================
+   3. Mobile Menu
+   ======================================== */
+.nav-mobile {
+    display: none;
+    background: var(--menu-bg);
+    padding: 10px 20px 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.nav-mobile.active { display: block; }
+
+.nav-mobile a {
+    display: block;
+    color: rgba(255,255,255,0.9);
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    font-size: 0.9375rem;
+}
+
+.nav-mobile a:last-child { border-bottom: none; }
+
+.nav-mobile a:hover { color: #fff; text-decoration: none; }
+
+.nav-mobile .logout-btn-mobile {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 8px 16px;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: var(--radius);
+    color: #fff;
+}
+
+/* ========================================
+   4. Path & Title
+   ======================================== */
+.container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.path {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    margin-bottom: 8px;
+}
+
+h1.page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+}
+
+/* ========================================
+   5. Main Content
+   ======================================== */
+main {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    min-height: 400px;
+}
+
+/* Card */
+.card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-main);
+}
+
+/* Table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+th, td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+tr:hover td { background: #f8fafc; }
+
+/* Form */
+.form-group { margin-bottom: 20px; }
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="email"],
+.form-group input[type="number"],
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.9375rem;
+    transition: border-color 0.2s;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    text-decoration: none;
+}
+
+.btn-secondary {
+    background: var(--bg-body);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover { background: var(--border); text-decoration: none; }
+
+/* ========================================
+   6. Footer
+   ======================================== */
+footer {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+}
+
+/* ========================================
+   7. Responsive
+   ======================================== */
+@media (max-width: 768px) {
+    .nav-desktop { display: none; }
+    .menu-toggle { display: block; }
+    .topbar-inner { padding: 0 16px; }
+    .container { padding: 16px; }
+    main { padding: 16px; }
+    h1.page-title { font-size: 1.25rem; }
+
+    table, thead, tbody, th, td, tr {
+        display: block;
+    }
+    thead tr { position: absolute; top: -9999px; left: -9999px; }
+    tr { margin-bottom: 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+    td {
+        border: none;
+        border-bottom: 1px solid var(--border);
+        position: relative;
+        padding-left: 50%;
+    }
+    td:last-child { border-bottom: none; }
+    td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 16px;
+        font-weight: 600;
+        color: var(--text-muted);
+        font-size: 0.8125rem;
+    }
+}
+
+@media (min-width: 769px) {
+    .nav-mobile { display: none !important; }
+}
+
+/* ========================================
+   8. Utilities
+   ======================================== */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-muted { color: var(--text-muted); }
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.d-flex { display: flex; }
+.justify-between { justify-content: space-between; }
+.align-center { align-items: center; }
+.gap-2 { gap: 16px; }
+
+/* ========================================
+   9. Tabs
+   ======================================== */
+.tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 0;
+    flex-wrap: wrap;
+}
+
+.tab {
+    padding: 10px 20px;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.tab:hover { color: var(--primary); text-decoration: none; }
+
+.tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    font-weight: 600;
+}
+
+/* ========================================
+   10. Alert
+   ======================================== */
+.alert {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    font-size: 0.875rem;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* ========================================
+   11. Table Form Elements
+   ======================================== */
+td select,
+td input[type="text"] {
+    width: 100%;
+    min-width: 80px;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: inherit;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+td select:focus,
+td input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+td label {
+    font-size: 0.85rem;
+    line-height: 1.8;
+    cursor: pointer;
+}
+
+td input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    td {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    td::before {
+        display: block;
+        position: static;
+        margin-bottom: 4px;
+        font-size: 0.8rem;
+    }
+
+    td select,
+    td input[type="text"] {
+        width: 100%;
+        min-width: 0;
+        padding: 10px 12px;
+        font-size: 1rem;
+    }
+
+    td input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+    }
+
+    td label {
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+}
