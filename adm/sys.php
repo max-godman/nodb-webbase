@@ -379,6 +379,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // ---- Image upload / delete ----
+    if ($postType === 'pics') {
+        $picsAction = $_POST['pics_action'] ?? '';
+
+        if ($picsAction === 'upload') {
+            $targetName = trim($_POST['target_name'] ?? '');
+            if (empty($targetName)) {
+                $error = 'Please enter a filename';
+            } elseif (empty($_FILES['image']['tmp_name']) || !is_uploaded_file($_FILES['image']['tmp_name'])) {
+                $error = 'Please select an image file';
+            } else {
+                $picsDir = realpath(__DIR__ . '/../pics');
+                $result = uploadImage($_FILES['image'], $targetName, $picsDir);
+                if (isset($result['success'])) {
+                    $message = 'Image uploaded: ' . htmlspecialchars($targetName);
+                    writeSysLog(1, $authUserid . ' uploaded image: ' . $targetName);
+                } else {
+                    $error = $result['error'];
+                }
+            }
+        }
+
+        if ($picsAction === 'delete') {
+            $targetName = trim($_POST['target_name'] ?? '');
+            if (!empty($targetName)) {
+                $targetPath = realpath(__DIR__ . '/../pics/' . $targetName);
+                $picsDir = realpath(__DIR__ . '/../pics');
+                if ($targetPath && strpos($targetPath, $picsDir) === 0 && file_exists($targetPath)) {
+                    $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+                    $ext = strtolower(pathinfo($targetName, PATHINFO_EXTENSION));
+                    if (in_array($ext, $allowedExts) && unlink($targetPath)) {
+                        $message = 'Image deleted: ' . htmlspecialchars($targetName);
+                        writeSysLog(1, $authUserid . ' deleted image: ' . $targetName);
+                    } else {
+                        $error = 'Failed to delete file';
+                    }
+                } else {
+                    $error = 'File not found';
+                }
+            }
+        }
+    }
+
     // ---- File Editor: add / remove / save ----
     if ($postType === 'editor') {
         $editorFile = __DIR__ . '/../data/editor_files.log';
@@ -491,6 +534,7 @@ include '../tpl/adm_head.log';
         <a href="sys.php?type=params" class="tab <?php echo $type === 'params' ? 'active' : ''; ?>">System Params</a>
         <a href="sys.php?type=ui" class="tab <?php echo $type === 'ui' ? 'active' : ''; ?>">UI Text</a>
         <a href="sys.php?type=editor" class="tab <?php echo $type === 'editor' ? 'active' : ''; ?>">File Editor</a>
+        <a href="sys.php?type=pics" class="tab <?php echo $type === 'pics' ? 'active' : ''; ?>">Pics</a>
         <a href="sys.php?type=menu" class="tab <?php echo $type === 'menu' ? 'active' : ''; ?>">Menu</a>
         <a href="sys.php?type=log" class="tab <?php echo $type === 'log' ? 'active' : ''; ?>">System Log</a>
     </div>
@@ -1000,6 +1044,103 @@ include '../tpl/adm_head.log';
         <?php endif; ?>
     </div>
     <style>.fw-bold { font-weight: 600; }</style>
+    <?php break;
+
+    // ================================================================
+    case 'pics': ?>
+    <!-- Image Upload -->
+    <?php
+        $picsDir = realpath(__DIR__ . '/../pics');
+        $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+
+        $imageFiles = [];
+        if ($picsDir && is_dir($picsDir)) {
+            $dh = opendir($picsDir);
+            if ($dh) {
+                while (($f = readdir($dh)) !== false) {
+                    if ($f === '.' || $f === '..') continue;
+                    $ext = strtolower(pathinfo($f, PATHINFO_EXTENSION));
+                    if (in_array($ext, $allowedExts)) {
+                        $imageFiles[] = $f;
+                    }
+                }
+                closedir($dh);
+            }
+        }
+        sort($imageFiles);
+    ?>
+    <div class="card">
+        <div class="card-title">Upload Image</div>
+        <form method="post" enctype="multipart/form-data">
+            <input type="hidden" name="sys_type" value="pics">
+            <input type="hidden" name="pics_action" value="upload">
+            <div class="d-flex gap-2" style="flex-wrap:wrap;align-items:flex-end;">
+                <div style="flex:1;min-width:180px;">
+                    <label style="font-size:0.8rem;">Filename (e.g. logo.png)</label>
+                    <input type="text" name="target_name" placeholder="logo.png" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);">
+                </div>
+                <div style="flex:1;min-width:180px;">
+                    <label style="font-size:0.8rem;">Select Image</label>
+                    <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/svg+xml" style="width:100%;padding:6px 0;">
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary" style="padding:8px 20px;" onclick="return confirm('Confirm upload?')">Upload</button>
+                </div>
+            </div>
+            <p class="text-muted mt-1" style="font-size:0.8rem;">Max 10MB. Dimensions 10-5000px. Supports: <?php echo implode(', ', $allowedExts); ?>. Existing files will be overwritten.</p>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Images in pics/ (<?php echo count($imageFiles); ?>)</div>
+        <?php if (empty($imageFiles)): ?>
+        <p class="text-muted">No images yet</p>
+        <?php else: ?>
+        <table style="table-layout:fixed;">
+            <colgroup>
+                <col style="width:60px;">
+                <col style="width:auto;">
+                <col style="width:150px;">
+                <col style="width:80px;">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th style="width:60px;">Preview</th>
+                    <th>Filename</th>
+                    <th style="width:150px;">Modified</th>
+                    <th style="width:80px;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($imageFiles as $img):
+                    $filePath = $picsDir . DIRECTORY_SEPARATOR . $img;
+                    $mtime = filemtime($filePath);
+                    $mtimeStr = $mtime ? date('Y-m-d H:i:s', $mtime) : 'Unknown';
+                ?>
+                <tr>
+                    <td data-label="Preview" style="text-align:center;">
+                        <a href="../pics/<?php echo rawurlencode($img); ?>" target="_blank">
+                            <img src="../pics/<?php echo rawurlencode($img); ?>" alt="" style="max-width:50px;max-height:50px;border-radius:4px;border:1px solid var(--border);">
+                        </a>
+                    </td>
+                    <td data-label="Filename" style="word-break:break-all;overflow:hidden;">
+                        <a href="../pics/<?php echo rawurlencode($img); ?>" target="_blank"><?php echo htmlspecialchars($img, ENT_QUOTES, 'UTF-8'); ?></a>
+                    </td>
+                    <td data-label="Modified"><?php echo $mtimeStr; ?></td>
+                    <td data-label="Action" class="text-center">
+                        <form method="post" style="display:inline;">
+                            <input type="hidden" name="sys_type" value="pics">
+                            <input type="hidden" name="pics_action" value="delete">
+                            <input type="hidden" name="target_name" value="<?php echo htmlspecialchars($img, ENT_QUOTES, 'UTF-8'); ?>">
+                            <button type="submit" class="btn btn-secondary" style="padding:4px 10px;font-size:0.8rem;" onclick="return confirm('Delete <?php echo htmlspecialchars($img, ENT_QUOTES, 'UTF-8'); ?>?')">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+    </div>
     <?php break;
 
 endswitch; ?>
