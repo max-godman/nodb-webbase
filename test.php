@@ -21,7 +21,7 @@ require_once __DIR__ . '/inc/sys_inc.php';
 header('Content-Type: text/html; charset=utf-8');
 
 // Anti-refresh detection (rapid refresh <3s will show error page)
-checkAntiRefresh(3, 'test.php');
+checkAntiRefresh(1000, '');
 
 // ============================================================
 // Check PHP Extension Status
@@ -155,6 +155,54 @@ $phpVersion = PHP_VERSION;
                         <div class="test-label">Cloudflare HTTP_CF_CONNECTING_IP <small>No extension needed</small></div>
                         <div class="test-value <?php echo !empty($_SERVER['HTTP_CF_CONNECTING_IP']) ? '' : 'warning'; ?>">
                             <?php echo !empty($_SERVER['HTTP_CF_CONNECTING_IP']) ? 'Available: ' . $_SERVER['HTTP_CF_CONNECTING_IP'] : 'Not detected (not using Cloudflare)'; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Upload Environment Check -->
+        <div class="section">
+            <div class="section-title">Image Upload Environment</div>
+            <div class="section-content">
+                <div class="grid">
+                    <div class="test-item">
+                        <div class="test-label">getimagesize() <small>Image dimension detection</small></div>
+                        <div class="test-value <?php echo function_exists('getimagesize') ? '' : 'error'; ?>">
+                            <?php echo function_exists('getimagesize') ? 'Available' : 'Not Available'; ?>
+                        </div>
+                    </div>
+                    <div class="test-item">
+                        <div class="test-label">file_uploads <small>File upload enabled</small></div>
+                        <div class="test-value <?php echo ini_get('file_uploads') ? '' : 'error'; ?>">
+                            <?php echo ini_get('file_uploads') ? 'On' : 'Off'; ?>
+                        </div>
+                    </div>
+                    <div class="test-item">
+                        <div class="test-label">upload_max_filesize <small>Max upload file size</small></div>
+                        <?php $uploadMax = ini_get('upload_max_filesize'); ?>
+                        <div class="test-value <?php echo (int)ini_get('upload_max_filesize') >= 10 ? '' : 'warning'; ?>">
+                            <?php echo $uploadMax; ?> <?php echo (int)$uploadMax >= 10 ? '(Sufficient for 10MB)' : '(May be insufficient for 10MB)'; ?>
+                        </div>
+                    </div>
+                    <div class="test-item">
+                        <div class="test-label">post_max_size <small>Max POST size</small></div>
+                        <?php $postMax = ini_get('post_max_size'); ?>
+                        <div class="test-value <?php echo (int)$postMax >= 10 ? '' : 'warning'; ?>">
+                            <?php echo $postMax; ?> <?php echo (int)$postMax >= 10 ? '(Sufficient for 10MB)' : '(May be insufficient for 10MB)'; ?>
+                        </div>
+                    </div>
+                    <div class="test-item">
+                        <div class="test-label">pics/ directory <small>Writable</small></div>
+                        <?php $picsDir = __DIR__ . '/pics'; $picsWritable = is_dir($picsDir) && is_writable($picsDir); ?>
+                        <div class="test-value <?php echo $picsWritable ? '' : 'error'; ?>">
+                            <?php echo $picsWritable ? 'Exists & Writable' : 'Missing or Not Writable'; ?>
+                        </div>
+                    </div>
+                    <div class="test-item">
+                        <div class="test-label">move_uploaded_file() <small>File move function</small></div>
+                        <div class="test-value <?php echo function_exists('move_uploaded_file') ? '' : 'error'; ?>">
+                            <?php echo function_exists('move_uploaded_file') ? 'Available' : 'Not Available'; ?>
                         </div>
                     </div>
                 </div>
@@ -370,7 +418,7 @@ $phpVersion = PHP_VERSION;
             <div class="section-title">10. Anti-Refresh Function</div>
             <div class="section-content">
                 <div class="test-item">
-                    <div class="test-label">checkAntiRefresh() <small>Anti-refresh detection (default 3s)</small></div>
+                    <div class="test-label">checkAntiRefresh() <small>Anti-refresh detection (default 1000ms)</small></div>
                     <div class="test-value warning">Refresh this page to test (interval &lt;3s will show error page)</div>
                 </div>
             </div>
