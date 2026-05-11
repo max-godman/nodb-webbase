@@ -97,6 +97,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'handler' => '',
                 'remark'  => '',
             ];
+
+            // Auto-create page entry in site_pages.php
+            $pages = [];
+            if (file_exists($pagesFile)) {
+                $raw = include $pagesFile;
+                if (is_array($raw)) $pages = $raw;
+            }
+            if (!isset($pages[$newKey])) {
+                $pages[$newKey] = [
+                    'path'        => $newMatch,
+                    'title'       => $newKey,
+                    'description' => '',
+                    'content'     => '<h2>' . htmlspecialchars($newKey) . '</h2><p>Content pending edit...</p>',
+                ];
+                $pc = "<?php\n/**\n * Front-end Static Pages Config\n * Generated: " . date('Y-m-d H:i:s') . "\n */\n\nreturn [\n";
+                foreach ($pages as $k => $p) {
+                    $pc .= "    " . var_export($k, true) . " => [\n";
+                    $pc .= "        'path'        => " . var_export($p['path'], true) . ",\n";
+                    $pc .= "        'title'       => " . var_export($p['title'], true) . ",\n";
+                    $pc .= "        'description' => " . var_export($p['description'], true) . ",\n";
+                    $pc .= "        'content'     => " . var_export($p['content'], true) . ",\n";
+                    $pc .= "    ],\n";
+                }
+                $pc .= "];\n";
+                file_put_contents($pagesFile, $pc, LOCK_EX);
+            }
         }
 
         // Write to draft file
@@ -248,7 +274,7 @@ include '../tpl/adm_head.log';
             </div>
         </div>
         <div class="mt-2">
-            <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm add route?')">Add</button>
+            <button type="submit" name="router_action" value="save" class="btn btn-primary" onclick="return confirm('Confirm add route?')">Add</button>
         </div>
     </div>
 
