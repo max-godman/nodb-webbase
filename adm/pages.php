@@ -59,26 +59,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $contents = $_POST['page_content'] ?? [];
         $deletes = $_POST['page_delete'] ?? [];
 
+        // Load existing pages when submitted from Add New Page form (no page_key[])
         $newPages = [];
-        foreach ($keys as $i => $key) {
-            $key = trim($key);
-            if (empty($key)) continue;
-
-            // Active pages cannot be deleted
-            $status = $routerStatusMap[$key] ?? 0;
-            if (isset($deletes[$i]) && $deletes[$i] === '1' && $status === 1) {
-                continue; // Ignore delete
+        if (empty($keys)) {
+            if (file_exists($pagesFile)) {
+                $raw = include $pagesFile;
+                if (is_array($raw)) $newPages = $raw;
             }
-            if (isset($deletes[$i]) && $deletes[$i] === '1') {
-                continue;
-            }
+        } else {
+            foreach ($keys as $i => $key) {
+                $key = trim($key);
+                if (empty($key)) continue;
 
-            $newPages[$key] = [
-                'path'        => $_POST['page_path'][$i] ?? '/',
-                'title'       => trim($titles[$i] ?? ''),
-                'description' => trim($descriptions[$i] ?? ''),
-                'content'     => trim($contents[$i] ?? ''),
-            ];
+                $status = $routerStatusMap[$key] ?? 0;
+                if (isset($deletes[$i]) && $deletes[$i] === '1' && $status === 1) {
+                    continue;
+                }
+                if (isset($deletes[$i]) && $deletes[$i] === '1') {
+                    continue;
+                }
+
+                $newPages[$key] = [
+                    'path'        => $_POST['page_path'][$i] ?? '/',
+                    'title'       => trim($titles[$i] ?? ''),
+                    'description' => trim($descriptions[$i] ?? ''),
+                    'content'     => trim($contents[$i] ?? ''),
+                ];
+            }
         }
 
         // Add new page
