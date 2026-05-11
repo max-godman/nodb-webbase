@@ -636,20 +636,21 @@ function getTimeDiffSeconds($pastTime) {
  * @param string $returnUrl Return URL for error page
  * @param string $errorMessage Custom error message
  */
-function checkAntiRefresh($minInterval = 3, $returnUrl = '', $errorMessage = '') {
+function checkAntiRefresh($minInterval = 1000, $returnUrl = '', $errorMessage = '') {
     // Ensure session is started
     if (session_status() === PHP_SESSION_NONE) {
         @session_start();
     }
     
-    $now = time();
+    $now = round(microtime(true) * 1000);
     $lastAccess = isset($_SESSION['sys_last_access']) ? intval($_SESSION['sys_last_access']) : 0;
     
     if ($lastAccess > 0) {
         $interval = $now - $lastAccess;
         if ($interval < $minInterval) {
             if (empty($errorMessage)) {
-                $errorMessage = 'Too fast, please try again in ' . ($minInterval - $interval) . ' seconds';
+                $remaining = round(($minInterval - $interval) / 1000, 1);
+                $errorMessage = 'Too fast, please try again in ' . $remaining . ' seconds';
             }
             showErrorAndExit($errorMessage, $returnUrl);
         }
@@ -924,9 +925,10 @@ function getCurrentUrl() {
  * @return string HTML content (compressed to one line)
  */
 function showErrorPage($message, $returnUrl = '') {
+    if (empty($returnUrl)) $returnUrl = $_SERVER['REQUEST_URI'] ?? '';
     $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
     $returnUrl = htmlspecialchars($returnUrl, ENT_QUOTES, 'UTF-8');
-    $returnLink = !empty($returnUrl) ? '<p style="margin-top:20px;font-size:14px;"><a href="'.$returnUrl.'" style="color:#3498db;text-decoration:none;">&#8592; Return</a></p>' : '';
+    $returnLink = !empty($returnUrl) ? '<p style="margin-top:20px;font-size:14px;"><a href="'.$returnUrl.'" style="color:#3498db;text-decoration:none;">&#8592; Refresh</a></p>' : '';
     return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Error</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#333}.e{background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1);padding:40px;max-width:500px;text-align:center;margin:20px}.i{font-size:48px;color:#e74c3c;margin-bottom:20px}.t{font-size:24px;font-weight:600;margin-bottom:10px;color:#2c3e50}.m{font-size:16px;color:#7f8c8d;line-height:1.6}a{color:#3498db;text-decoration:none}a:hover{text-decoration:underline}</style></head><body><div class="e"><div class="i">&#9888;</div><div class="t">Error</div><div class="m">'.$message.'</div>'.$returnLink.'</div></body></html>';
 }
 
@@ -1326,4 +1328,58 @@ function getScriptPath() {
  */
 function getQueryString() {
     return isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '';
+}
+
+/**
+ * Image upload helper
+ * 
+ * Validates file type, size, and dimensions, then saves to target directory.
+ * If target file exists, it will be overwritten.
+ * 
+ * @param array  $file       $_FILES array element, e.g. $_FILES['image']
+ * @param string $targetName Desired filename including extension, e.g. 'logo.png'
+ * @param string $targetDir  Absolute path to target directory
+ * @return array ['success' => true, 'path' => 'relative/path'] or ['error' => 'message']
+ */
+function uploadImage($file, $targetName, $targetDir) {
+    $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+    $maxSize     = 10 * 1024 * 1024;
+    $maxDim      = 5000;
+    $minDim      = 10;
+
+    if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        return ['error' => 'No file uploaded'];
+    }
+
+    $ext = strtolower(pathinfo($targetName, PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowedExts)) {
+        return ['error' => 'Unsupported file extension: ' . htmlspecialchars($ext) . '. Allowed: ' . implode(', ', $allowedExts)];
+    }
+
+    if ($file['size'] > $maxSize) {
+        return ['error' => 'File too large (max 10MB)'];
+    }
+
+    $info = @getimagesize($file['tmp_name']);
+    if ($info === false) {
+        return ['error' => 'Invalid image file'];
+    }
+    list($w, $h) = $info;
+    if ($w > $maxDim || $h > $maxDim) {
+        return ['error' => "Image dimensions ({$w}x{$h}) exceed max {$maxDim}px"];
+    }
+    if ($w < $minDim || $h < $minDim) {
+        return ['error' => "Image dimensions ({$w}x{$h}) below min {$minDim}px"];
+    }
+
+    $destPath = rtrim($targetDir, '/\\') . DIRECTORY_SEPARATOR . $targetName;
+    if (!is_dir(dirname($destPath))) {
+        return ['error' => 'Target directory does not exist'];
+    }
+
+    if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+        return ['error' => 'Failed to save file'];
+    }
+
+    return ['success' => true, 'path' => $targetName];
 }
