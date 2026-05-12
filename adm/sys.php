@@ -407,8 +407,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $targetPath = realpath(__DIR__ . '/../pics/' . $targetName);
                 $picsDir = realpath(__DIR__ . '/../pics');
                 if ($targetPath && strpos($targetPath, $picsDir) === 0 && file_exists($targetPath)) {
-                    $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
-                    $ext = strtolower(pathinfo($targetName, PATHINFO_EXTENSION));
+                    $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'ico'];
+
                     if (in_array($ext, $allowedExts) && unlink($targetPath)) {
                         $message = 'Image deleted: ' . htmlspecialchars($targetName);
                         writeSysLog(1, $authUserid . ' deleted image: ' . $targetName);
@@ -1051,7 +1051,7 @@ include '../tpl/adm_head.log';
     <!-- Image Upload -->
     <?php
         $picsDir = realpath(__DIR__ . '/../pics');
-        $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+        $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'ico'];
 
         $imageFiles = [];
         if ($picsDir && is_dir($picsDir)) {

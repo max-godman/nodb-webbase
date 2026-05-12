@@ -1,46 +1,36 @@
 <?php
-/**
- * NoDB-WebBase
- * GitHub: https://github.com/max-godman
- * 
- * Pages Management
- *
- * @package NoDB-WebBase
- */
-
-$pageTitle = 'Pages';
+$pageTitle = 'Content';
 $pageLevel = 20;
 require_once '../inc/auth.php';
 
 $pagesFile     = __DIR__ . '/../inc/site_pages.php';
-$dynamicFile   = __DIR__ . '/../inc/site_dynamic.php';
 $routerLogFile = __DIR__ . '/../data/site_router.log';
-
-$type = isset($_GET['type']) ? $_GET['type'] : 'page';
-if (!in_array($type, ['page', 'dynamic'])) $type = 'page';
 
 $message = '';
 $error   = '';
 
+function resolvePreviewUrl($pattern) {
+    return preg_replace_callback('/\{(\w+)\}/', function($m) {
+        return ctype_digit($m[1]) ? '1' : 'test';
+    }, $pattern);
+}
+
 // =====================================================================
-// Read router status
+// Read router status map (from draft)
 // =====================================================================
 $routerStatusMap = [];
+$routerPatternMap = [];
 if (file_exists($routerLogFile)) {
     $lines = file($routerLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
         $line = trim($line);
         if (empty($line)) continue;
-        $parts = explode('|', $line);
-        if (count($parts) < 6) continue;
-        $key = trim($parts[3]);
+        $parts = explode('|', $line, 5);
+        if (count($parts) < 4) continue;
+        $key = trim($parts[2]);
         if (!empty($key)) {
             $routerStatusMap[$key] = intval(trim($parts[0]));
-        }
-        // Dynamic routes use handler as key mapping
-        $handler = trim($parts[4]);
-        if (!empty($handler)) {
-            $routerStatusMap[$handler] = intval(trim($parts[0]));
+            $routerPatternMap[$key] = trim($parts[1]);
         }
     }
 }
@@ -49,140 +39,52 @@ if (file_exists($routerLogFile)) {
 // POST handling
 // =====================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $postAction = $_POST['page_action'] ?? 'save';
+    $keys   = $_POST['page_key'] ?? [];
+    $types  = $_POST['page_type'] ?? [];
+    $titles = $_POST['page_title'] ?? [];
+    $descs  = $_POST['page_description'] ?? [];
+    $contents = $_POST['page_content'] ?? [];
 
-    // ---- Static page save ----
-    if ($postAction === 'save' && $type === 'page') {
-        $keys = $_POST['page_key'] ?? [];
-        $titles = $_POST['page_title'] ?? [];
-        $descriptions = $_POST['page_description'] ?? [];
-        $contents = $_POST['page_content'] ?? [];
-        $deletes = $_POST['page_delete'] ?? [];
+    $newPages = [];
+    foreach ($keys as $i => $key) {
+        $key = trim($key);
+        if (empty($key)) continue;
 
-        // Load existing pages when submitted from Add New Page form (no page_key[])
-        $newPages = [];
-        if (empty($keys)) {
-            if (file_exists($pagesFile)) {
-                $raw = include $pagesFile;
-                if (is_array($raw)) $newPages = $raw;
-            }
-        } else {
-            foreach ($keys as $i => $key) {
-                $key = trim($key);
-                if (empty($key)) continue;
-
-                $status = $routerStatusMap[$key] ?? 0;
-                if (isset($deletes[$i]) && $deletes[$i] === '1' && $status === 1) {
-                    continue;
-                }
-                if (isset($deletes[$i]) && $deletes[$i] === '1') {
-                    continue;
-                }
-
-                $newPages[$key] = [
-                    'path'        => $_POST['page_path'][$i] ?? '/',
-                    'title'       => trim($titles[$i] ?? ''),
-                    'description' => trim($descriptions[$i] ?? ''),
-                    'content'     => trim($contents[$i] ?? ''),
-                ];
-            }
-        }
-
-        // Add new page
-        $newKey = trim($_POST['new_key'] ?? '');
-        $newPath = trim($_POST['new_path'] ?? '');
-        $newTitle = trim($_POST['new_title'] ?? '');
-        $newDesc = trim($_POST['new_description'] ?? '');
-        $newContent = trim($_POST['new_content'] ?? '');
-
-        if (!empty($newKey) && !empty($newPath) && !empty($newTitle)) {
-            if (isset($newPages[$newKey])) {
-                    $error = 'Page key ' . htmlspecialchars($newKey) . ' already exists';
-            } else {
-                $newPages[$newKey] = [
-                    'path'        => $newPath,
-                    'title'       => $newTitle,
-                    'description' => $newDesc,
-                    'content'     => $newContent,
-                ];
-            }
-        }
-
-        if (empty($error)) {
-            $content = "<?php\n/**\n * Front-end Static Pages Config\n * Generated: " . date('Y-m-d H:i:s') . "\n */\n\nreturn [\n";
-            foreach ($newPages as $k => $p) {
-                $content .= "    " . var_export($k, true) . " => [\n";
-                $content .= "        'path'        => " . var_export($p['path'], true) . ",\n";
-                $content .= "        'title'       => " . var_export($p['title'], true) . ",\n";
-                $content .= "        'description' => " . var_export($p['description'], true) . ",\n";
-                $content .= "        'content'     => " . var_export($p['content'], true) . ",\n";
-                $content .= "    ],\n";
-            }
-            $content .= "];\n";
-
-            if (file_put_contents($pagesFile, $content, LOCK_EX) !== false) {
-                $message = 'Pages saved';
-                writeSysLog(1, $authUserid . ' modified front-end pages');
-            } else {
-                $error = 'Save failed';
-            }
-        }
+        $newPages[$key] = [
+            'type'        => trim($types[$i] ?? 'page'),
+            'title'       => trim($titles[$i] ?? ''),
+            'description' => trim($descs[$i] ?? ''),
+            'content'     => $contents[$i] ?? '',
+        ];
     }
 
-    // ---- Dynamic template save ----
-    if ($postAction === 'save_dynamic' && $type === 'dynamic') {
-        $handlers = $_POST['dyn_handler'] ?? [];
-        $titles = $_POST['dyn_title'] ?? [];
-        $descriptions = $_POST['dyn_description'] ?? [];
-        $contents = $_POST['dyn_content'] ?? [];
+    $pc = "<?php\n/**\n * Front-end Page Config\n * Generated: " . date('Y-m-d H:i:s') . "\n */\n\nreturn [\n";
+    foreach ($newPages as $k => $p) {
+        $pc .= "    " . var_export($k, true) . " => [\n";
+        $pc .= "        'type'        => " . var_export($p['type'], true) . ",\n";
+        $pc .= "        'title'       => " . var_export($p['title'], true) . ",\n";
+        $pc .= "        'description' => " . var_export($p['description'], true) . ",\n";
+        $pc .= "        'content'     => " . var_export($p['content'], true) . ",\n";
+        $pc .= "    ],\n";
+    }
+    $pc .= "];\n";
 
-        $newDynamic = [];
-        foreach ($handlers as $i => $handler) {
-            $handler = trim($handler);
-            if (empty($handler)) continue;
-            $newDynamic[$handler] = [
-                'title'       => trim($titles[$i] ?? ''),
-                'description' => trim($descriptions[$i] ?? ''),
-                'content'     => trim($contents[$i] ?? ''),
-            ];
-        }
-
-            $dc = "<?php\n/**\n * Front-end Dynamic Page Templates\n * Generated: " . date('Y-m-d H:i:s') . "\n */\n\nreturn [\n";
-        foreach ($newDynamic as $h => $d) {
-            $dc .= "    " . var_export($h, true) . " => [\n";
-            $dc .= "        'title'       => " . var_export($d['title'], true) . ",\n";
-            $dc .= "        'description' => " . var_export($d['description'], true) . ",\n";
-            $dc .= "        'content'     => " . var_export($d['content'], true) . ",\n";
-            $dc .= "    ],\n";
-        }
-        $dc .= "];\n";
-
-        if (file_put_contents($dynamicFile, $dc, LOCK_EX) !== false) {
-                $message = 'Dynamic templates saved';
-                writeSysLog(1, $authUserid . ' modified dynamic templates');
-        } else {
-            $error = 'Save failed';
-        }
+    if (file_put_contents($pagesFile, $pc, LOCK_EX) !== false) {
+        $message = 'Content saved';
+        writeSysLog(1, $authUserid . ' updated page content');
+    } else {
+        $error = 'Save failed';
     }
 }
 
 // =====================================================================
-// Read configs
+// Read page configs
 // =====================================================================
 $pages = [];
 if (file_exists($pagesFile)) {
     $raw = include $pagesFile;
     if (is_array($raw)) $pages = $raw;
 }
-
-$dynamic = [];
-if (file_exists($dynamicFile)) {
-    $raw = include $dynamicFile;
-    if (is_array($raw)) $dynamic = $raw;
-}
-
-// Fixed order for dynamic templates
-$dynamicOrder = ['tag', 'search', 'article', 'category', 'news', 'info'];
 
 include '../tpl/adm_head.log';
 ?>
@@ -196,149 +98,88 @@ include '../tpl/adm_head.log';
 
 <!-- Tabs -->
 <div class="card" style="padding-bottom:0;">
-    <div class="tabs"><a href="router.php" class="tab">Routes</a>
-        <a href="pages.php?type=page" class="tab <?php echo $type === 'page' ? 'active' : ''; ?>">Static</a>
-        <a href="pages.php?type=dynamic" class="tab <?php echo $type === 'dynamic' ? 'active' : ''; ?>">Dynamic</a>
-        <a href="nav.php" class="tab">Front Nav</a>
+    <div class="tabs">
+        <a href="router.php" class="tab">Pages</a>
+        <span class="tab active">Content</span>
+        <a href="nav.php" class="tab">Menu</a>
     </div>
 </div>
 
-<?php if ($type === 'page'): ?>
-<!-- ================================
-     Static Pages
-     ================================ -->
 <div class="card">
-    <div class="card-title">Edit Static Pages</div>
-    <p class="text-muted mb-2" style="font-size:0.8rem;">Modify page title, description and content HTML. Active routes cannot be deleted.</p>
+    <div class="card-title">Edit Page Content</div>
+    <p class="text-muted mb-2" style="font-size:0.8rem;">
+        Use <code>{code:var}</code> for code block variables, <code>{sys_site_name}</code> for system parameters.
+        Code blocks are edited via <a href="sys.php?type=editor">File Editor</a>.
+    </p>
     <form method="post">
-        <input type="hidden" name="page_action" value="save">
-
+        <?php if (empty($pages)): ?>
+        <p class="text-muted">No pages yet. Add one in <a href="router.php">Pages</a>.</p>
+        <?php else: ?>
         <?php $i = 0; foreach ($pages as $key => $page):
-            $status = $routerStatusMap[$key] ?? 0;
-            $statusLabel = $status === 1
+            $routeStatus = $routerStatusMap[$key] ?? '-';
+            $statusLabel = $routeStatus === 2
                 ? '<span style="color:#38a169; font-size:0.75rem;">[Active]</span>'
-                : '<span style="color:#dd6b20; font-size:0.75rem;">[Inactive]</span>';
-            $canDelete = ($status !== 1);
+                : ($routeStatus === 1
+                    ? '<span style="color:#dd6b20; font-size:0.75rem;">[Paused]</span>'
+                    : '<span style="color:#999; font-size:0.75rem;">[No route]</span>');
+            $pattern = $routerPatternMap[$key] ?? '';
+            $previewUrl = $pattern ? resolvePreviewUrl($pattern) : '';
+            $typeBadge = $page['type'] === 'api'
+                ? '<span style="color:#e53e3e; font-size:0.75rem;">api</span>'
+                : ($page['type'] === 'page'
+                    ? '<span style="color:#666; font-size:0.75rem;">page</span>'
+                    : '<span style="color:#3182ce; font-size:0.75rem;">' . htmlspecialchars($page['type'], ENT_QUOTES, 'UTF-8') . '</span>');
+            $typeLink = ($routeStatus === 2 && !empty($previewUrl))
+                ? '<a href="' . htmlspecialchars($previewUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" style="color:inherit; text-decoration:none;" title="Open preview">' . $typeBadge . ' &#8599;</a>'
+                : $typeBadge;
+            $hasCodeFile = in_array($page['type'], ['code', 'code_paged', 'api']) && file_exists(__DIR__ . '/../tpl/code_' . $key . '.log');
+            $codeContent = $hasCodeFile ? file_get_contents(__DIR__ . '/../tpl/code_' . $key . '.log') : '';
         ?>
         <div class="card" style="margin-bottom:16px; background:#f8fafc;">
             <div class="card-title" style="font-size:0.95rem;">
                 <?php echo htmlspecialchars($key, ENT_QUOTES, 'UTF-8'); ?>
-                <span class="text-muted" style="font-size:0.8rem; font-weight:normal;">
-                    <a href="<?php echo htmlspecialchars($page['path'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank"><?php echo htmlspecialchars($page['path'], ENT_QUOTES, 'UTF-8'); ?></a>
-                    <?php echo $statusLabel; ?>
-                </span>
+                <?php echo $typeLink; ?>
+                <?php echo $statusLabel; ?>
             </div>
             <input type="hidden" name="page_key[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($key, ENT_QUOTES, 'UTF-8'); ?>">
-            <input type="hidden" name="page_path[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($page['path'], ENT_QUOTES, 'UTF-8'); ?>">
+            <input type="hidden" name="page_type[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($page['type'], ENT_QUOTES, 'UTF-8'); ?>">
 
+            <?php if (in_array($page['type'], ['code', 'code_paged', 'api'])): ?>
+            <div class="form-group">
+                <label>
+                    Code Block
+                    <?php if ($hasCodeFile): ?>
+                    <a href="sys.php?type=editor&edit=<?php echo urlencode('tpl/code_' . $key . '.log'); ?>" style="font-size:0.8rem; font-weight:normal; margin-left:8px;">Edit in File Editor</a>
+                    <?php endif; ?>
+                </label>
+                <textarea readonly rows="6" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:var(--radius); font-family:Consolas,'Courier New',monospace; font-size:0.85rem; background:#f1f1f1; color:#555; resize:vertical; tab-size:4;"><?php echo htmlspecialchars($codeContent ?: '// No code file yet. Save in Pages first.', ENT_QUOTES, 'UTF-8'); ?></textarea>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($page['type'] !== 'api'): ?>
             <div class="form-group">
                 <label>Title</label>
-                <input type="text" name="page_title[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($page['title'], ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;">
+                <input type="text" name="page_title[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($page['title'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius);">
             </div>
             <div class="form-group">
                 <label>Description</label>
-                <input type="text" name="page_description[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($page['description'], ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;">
+                <input type="text" name="page_description[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($page['description'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius);">
             </div>
             <div class="form-group">
                 <label>Content (HTML)</label>
-                <textarea name="page_content[<?php echo $i; ?>]" rows="6" style="width:100%; font-family:Consolas,'Courier New',monospace; font-size:0.875rem;"><?php echo htmlspecialchars($page['content'], ENT_QUOTES, 'UTF-8'); ?></textarea>
+                <textarea name="page_content[<?php echo $i; ?>]" rows="6" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); font-family:Consolas,'Courier New',monospace; font-size:0.875rem; resize:vertical;"><?php echo htmlspecialchars($page['content'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
             </div>
-            <?php if ($canDelete): ?>
-            <label style="font-size:0.85rem; color:#c53030;">
-                <input type="checkbox" name="page_delete[<?php echo $i; ?>]" value="1"> Delete this page
-            </label>
             <?php else: ?>
-            <p class="text-muted" style="font-size:0.8rem;">This page route is active and cannot be deleted. Disable it in Routes first.</p>
+            <p class="text-muted" style="font-style:italic;">API pages have no title, description or content. Only the code block is used.</p>
             <?php endif; ?>
         </div>
         <?php $i++; endforeach; ?>
 
         <div class="mt-2">
-            <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm save pages?')">Save Pages</button>
+            <button type="submit" class="btn btn-primary" onclick="return confirm('Save all content changes?')">Save Content</button>
         </div>
+        <?php endif; ?>
     </form>
 </div>
-
-<div class="card">
-    <div class="card-title">Add New Page</div>
-    <p class="text-muted mb-2" style="font-size:0.8rem;">Add a corresponding route in Routes to make it accessible.</p>
-    <form method="post">
-        <input type="hidden" name="page_action" value="save">
-        <div class="form-group">
-            <label>Key (e.g. about)</label>
-            <input type="text" name="new_key" placeholder="about" style="width:100%;">
-        </div>
-        <div class="form-group">
-            <label>Path (e.g. /about.html)</label>
-            <input type="text" name="new_path" placeholder="/about.html" style="width:100%;">
-        </div>
-        <div class="form-group">
-            <label>Title</label>
-            <input type="text" name="new_title" placeholder="Page title" style="width:100%;">
-        </div>
-        <div class="form-group">
-            <label>Description</label>
-            <input type="text" name="new_description" placeholder="Page description" style="width:100%;">
-        </div>
-        <div class="form-group">
-            <label>Content (HTML)</label>
-            <textarea name="new_content" rows="4" placeholder="<h2>Title</h2><p>Content...</p>" style="width:100%; font-family:Consolas,'Courier New',monospace; font-size:0.875rem;"></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm add page?')">Add Page</button>
-    </form>
-</div>
-
-<?php else: ?>
-<div class="card">
-    <div class="card-title">Edit Dynamic Templates</div>
-    <p class="text-muted mb-2" style="font-size:0.8rem;">Modify dynamic page title, description and content templates. Supports variables: <code>{tagname}</code> <code>{keyword}</code> <code>{fn}</code> <code>{categoryname}</code> <code>{newsname}</code> <code>{content}</code></p>
-    <form method="post">
-        <input type="hidden" name="page_action" value="save_dynamic">
-
-        <?php foreach ($dynamicOrder as $handler):
-            $tpl = isset($dynamic[$handler]) ? $dynamic[$handler] : ['title' => '', 'description' => '', 'content' => ''];
-            $status = $routerStatusMap[$handler] ?? 0;
-            $statusLabel = $status === 1
-                ? '<span style="color:#38a169; font-size:0.75rem;">[Active]</span>'
-                : '<span style="color:#dd6b20; font-size:0.75rem;">[Inactive]</span>';
-            // Build preview URL
-            switch ($handler) {
-                case 'tag':      $previewUrl = '/tag/example'; break;
-                case 'search':   $previewUrl = '/search?q=keyword'; break;
-                case 'article':  $previewUrl = '/article/0000000000000.html'; break;
-                case 'category': $previewUrl = '/category/example'; break;
-                case 'news':     $previewUrl = '/news/example'; break;
-                case 'info':     $previewUrl = '/info/0000000000000.html'; break;
-                default:         $previewUrl = ''; break;
-            }
-        ?>
-        <div class="card" style="margin-bottom:16px; background:#f8fafc;">
-            <div class="card-title" style="font-size:0.95rem;">
-                <?php echo htmlspecialchars($handler); ?> <?php echo $statusLabel; ?>
-                <a href="<?php echo htmlspecialchars($previewUrl); ?>" target="_blank" style="font-size:0.75rem; font-weight:normal; margin-left:8px;">Preview</a>
-            </div>
-            <input type="hidden" name="dyn_handler[]" value="<?php echo htmlspecialchars($handler, ENT_QUOTES, 'UTF-8'); ?>">
-
-            <div class="form-group">
-                <label>Title Template</label>
-                <input type="text" name="dyn_title[]" value="<?php echo htmlspecialchars($tpl['title'], ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;">
-            </div>
-            <div class="form-group">
-                <label>Description Template</label>
-                <input type="text" name="dyn_description[]" value="<?php echo htmlspecialchars($tpl['description'], ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;">
-            </div>
-            <div class="form-group">
-                <label>Content Template (HTML)</label>
-                <textarea name="dyn_content[]" rows="5" style="width:100%; font-family:Consolas,'Courier New',monospace; font-size:0.875rem;"><?php echo htmlspecialchars($tpl['content'], ENT_QUOTES, 'UTF-8'); ?></textarea>
-            </div>
-        </div>
-        <?php endforeach; ?>
-
-        <div class="mt-2">
-            <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm save dynamic templates?')">Save Templates</button>
-        </div>
-    </form>
-</div>
-<?php endif; ?>
 
 <?php include '../tpl/adm_foot.log'; ?>

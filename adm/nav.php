@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * NoDB-WebBase
  * GitHub: https://github.com/max-godman
@@ -8,9 +8,15 @@
  * @package NoDB-WebBase
  */
 
-$pageTitle = 'Front Nav';
+$pageTitle = 'Menu';
 $pageLevel = 20;
 require_once '../inc/auth.php';
+
+function resolvePreviewUrl($pattern) {
+    return preg_replace_callback('/\{(\w+)\}/', function($m) {
+        return ctype_digit($m[1]) ? '1' : 'test';
+    }, $pattern);
+}
 
 $navFile = __DIR__ . '/../data/site_nav.log';
 $message = '';
@@ -98,16 +104,15 @@ include '../tpl/adm_head.log';
 <!-- Tabs -->
 <div class="card" style="padding-bottom:0;">
     <div class="tabs">
-        <a href="router.php" class="tab">Routes</a>
-        <a href="pages.php?type=page" class="tab">Static</a>
-        <a href="pages.php?type=dynamic" class="tab">Dynamic</a>
-        <span class="tab active">Front Nav</span>
+        <a href="router.php" class="tab">Pages</a>
+        <a href="pages.php" class="tab">Content</a>
+        <span class="tab active">Menu</span>
     </div>
 </div>
 
 <div class="card">
-    <div class="card-title">Edit Front Nav</div>
-    <p class="text-muted mb-2" style="font-size:0.8rem;">Format: sort|text|link|status (0=hide/1=show). Inactive items will not appear on the front-end.</p>
+    <div class="card-title">Edit Menu</div>
+    <p class="text-muted mb-2" style="font-size:0.8rem;">Format: sort|text|link|status (0=hide/1=show). Use <code>{sys_site_weburl}</code> for absolute URLs (e.g. <code>{sys_site_weburl}/about.html</code>).</p>
     <form method="post">
         <table>
             <thead>
@@ -132,6 +137,9 @@ include '../tpl/adm_head.log';
                     </td>
                     <td data-label="Link">
                         <input type="text" name="link[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($item['link'], ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;">
+                        <?php if ($item['status'] === 1): $pv = resolvePreviewUrl($item['link']); ?>
+                        <a href="<?php echo htmlspecialchars($pv, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" style="font-size:0.75rem; margin-left:4px; white-space:nowrap;" title="Open preview">&#8599;</a>
+                        <?php endif; ?>
                     </td>
                     <td data-label="Active" class="text-center">
                         <input type="checkbox" name="status[<?php echo $i; ?>]" value="1" <?php echo $item['status'] === 1 ? 'checked' : ''; ?>>

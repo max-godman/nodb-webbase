@@ -1,50 +1,127 @@
 <?php
-/**
- * NoDB-WebBase
- * GitHub: https://github.com/max-godman
- * 
- * Router Management
- *
- * @package NoDB-WebBase
- */
-
-$pageTitle = 'Routes';
+$pageTitle = 'Pages';
 $pageLevel = 20;
 require_once '../inc/auth.php';
+require_once __DIR__ . '/../inc/site_functions.php';
+
+function resolvePreviewUrl($pattern) {
+    return preg_replace_callback('/\{(\w+)\}/', function($m) {
+        return ctype_digit($m[1]) ? '1' : 'test';
+    }, $pattern);
+}
+
+function autoGenerateKey($pattern) {
+    $key = trim($pattern, '/');
+    $key = preg_replace('/\.\w+$/', '', $key);
+    $key = preg_replace('/\{.*?\}/', '', $key);
+    $key = preg_replace('/[^a-zA-Z0-9_\-]/', '-', $key);
+    $key = trim($key, '-');
+    return $key !== '' ? $key : 'index';
+}
 
 $routerLogFile = __DIR__ . '/../data/site_router.log';
 $routerPhpFile = __DIR__ . '/../inc/site_router.php';
 $pagesFile     = __DIR__ . '/../inc/site_pages.php';
+$editorListFile = __DIR__ . '/../data/editor_files.log';
 
 $message = '';
 $error   = '';
 
 // =====================================================================
-// Read router draft
+// Read existing draft
 // =====================================================================
-$routes = [];
+$draftRoutes = [];
 if (file_exists($routerLogFile)) {
     $lines = file($routerLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
         $line = trim($line);
         if (empty($line)) continue;
-        $parts = explode('|', $line);
-        if (count($parts) < 6) continue;
-        $routes[] = [
+        $parts = explode('|', $line, 5);
+        if (count($parts) < 4) continue;
+        $draftRoutes[] = [
             'status'  => intval(trim($parts[0])),
-            'type'    => trim($parts[1]),
-            'match'   => trim($parts[2]),
-            'key'     => trim($parts[3]),
-            'handler' => trim($parts[4]),
-            'remark'  => trim($parts[5]),
+            'pattern' => trim($parts[1]),
+            'key'     => trim($parts[2]),
+            'vars'    => trim($parts[3]),
+            'remark'  => isset($parts[4]) ? trim($parts[4]) : '',
         ];
     }
 }
 
 // =====================================================================
-// Check DB config
+// Read existing pages
 // =====================================================================
-$hasDbConfig = file_exists(__DIR__ . '/../inc/sys_sql.php') && file_exists(__DIR__ . '/../inc/sys_conn.php');
+$existingPages = [];
+if (file_exists($pagesFile)) {
+    $raw = include $pagesFile;
+    if (is_array($raw)) $existingPages = $raw;
+}
+
+// =====================================================================
+// Read editor file list
+// =====================================================================
+$editorFiles = [];
+if (file_exists($editorListFile)) {
+    $lines = file($editorListFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $editorFiles[] = trim($line);
+    }
+}
+
+// =====================================================================
+// Helper: create default page config
+// =====================================================================
+function createDefaultPageConfig($key, $type) {
+    return [
+        'type'        => $type,
+        'title'       => ucfirst($key),
+        'description' => '',
+        'content'     => '<h2>' . htmlspecialchars(ucfirst($key)) . '</h2><p>Content pending...</p>',
+    ];
+}
+
+// =====================================================================
+// Helper: create default code file
+// =====================================================================
+function createCodeFile($key, $vars) {
+    $codeFile = __DIR__ . '/../tpl/code_' . $key . '.log';
+    if (file_exists($codeFile)) return;
+
+    $varExamples = '';
+    if (!empty($vars)) {
+        $varList = explode(',', $vars);
+        foreach ($varList as $v) {
+            $v = trim($v);
+            $varExamples .= '$' . $v . ' = $matchedRoute[\'named_params\'][\'' . $v . '\'] ?? \'\';' . "\n";
+        }
+    }
+
+    $content = "<?php\n";
+    if (!empty($varExamples)) {
+        $content .= "// Route variables\n" . $varExamples . "\n";
+    }
+    $content .= "// Set {code:xxx} variables for Content editor\n";
+    if (!empty($varExamples)) {
+        $content .= "\$sample_title = 'Title from code';\n";
+    }
+    $content .= "\$sample_content = '<p>Content pending...</p>';\n";
+
+    file_put_contents($codeFile, $content, LOCK_EX);
+}
+
+// =====================================================================
+// Helper: remove code file and editor list entry
+// =====================================================================
+function removeCodeFile($key, &$editorFiles) {
+    $codeFile = __DIR__ . '/../tpl/code_' . $key . '.log';
+    if (file_exists($codeFile)) {
+        unlink($codeFile);
+    }
+    $entry = 'tpl/code_' . $key . '.log';
+    $editorFiles = array_values(array_filter($editorFiles, function($f) use ($entry) {
+        return $f !== $entry;
+    }));
+}
 
 // =====================================================================
 // POST handling
@@ -52,188 +129,234 @@ $hasDbConfig = file_exists(__DIR__ . '/../inc/sys_sql.php') && file_exists(__DIR
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['router_action'] ?? '';
 
-    // ---- Save draft ----
-    if ($action === 'save') {
-        $statuses = $_POST['route_status'] ?? [];
-        $matches  = $_POST['route_match'] ?? [];
-        $keys     = $_POST['route_key'] ?? [];
-        $handlers = $_POST['route_handler'] ?? [];
-        $deletes  = $_POST['route_delete'] ?? [];
+    // ---- Add new route ----
+    if ($action === 'add') {
+        $newPattern = trim($_POST['new_pattern'] ?? '');
+        $newKey     = trim($_POST['new_key'] ?? '');
+        $newType    = trim($_POST['new_type'] ?? 'page');
+        $newStatus  = intval($_POST['new_status'] ?? 1);
 
-        $newRoutes = [];
-        foreach ($keys as $i => $key) {
-            if (isset($deletes[$i]) && $deletes[$i] === '1') continue;
-
-            $type    = $_POST['route_type'][$i] ?? 'page';
-            $match   = trim($matches[$i] ?? '');
-            $handler = trim($handlers[$i] ?? '');
-            $remark  = '';
-            $status  = isset($statuses[$i]) ? 1 : 0;
-
-            // Force dynamic routes to 0 if no DB
-            if (!$hasDbConfig && $type !== 'page') {
-                $status = 0;
-            }
-
-            $newRoutes[] = [
-                'status'  => $status,
-                'type'    => $type,
-                'match'   => $match,
-                'key'     => trim($key),
-                'handler' => $handler,
-                'remark'  => $remark,
-            ];
+        // Auto-generate key for page type if empty
+        if (empty($newKey) && $newType === 'page') {
+            $newKey = autoGenerateKey($newPattern);
         }
 
-        // Add new static route
-        $newMatch   = trim($_POST['new_match'] ?? '');
-        $newKey     = trim($_POST['new_key'] ?? '');
-        if (!empty($newMatch) && !empty($newKey)) {
-            $newRoutes[] = [
-                'status'  => 0,
-                'type'    => 'page',
-                'match'   => $newMatch,
+        if (empty($newPattern)) {
+            $error = 'Please fill in URL Pattern';
+        } elseif (empty($newKey)) {
+            $error = 'Please fill in Page Key (or use page type for auto-fill)';
+        } elseif (isset($existingPages[$newKey])) {
+            $error = 'Page key "' . htmlspecialchars($newKey) . '" already exists';
+        } else {
+            // Create page config
+            $existingPages[$newKey] = createDefaultPageConfig($newKey, $newType);
+            $pc = "<?php\n/**\n * Front-end Page Config\n * Generated: " . date('Y-m-d H:i:s') . "\n */\n\nreturn [\n";
+            foreach ($existingPages as $k => $p) {
+                $pc .= "    " . var_export($k, true) . " => [\n";
+                $pc .= "        'type'        => " . var_export($p['type'], true) . ",\n";
+                $pc .= "        'title'       => " . var_export($p['title'], true) . ",\n";
+                $pc .= "        'description' => " . var_export($p['description'], true) . ",\n";
+                $pc .= "        'content'     => " . var_export($p['content'], true) . ",\n";
+                $pc .= "    ],\n";
+            }
+            $pc .= "];\n";
+            file_put_contents($pagesFile, $pc, LOCK_EX);
+
+            // Create code file if needed
+            if (in_array($newType, ['code', 'code_paged', 'api'])) {
+                $compiled = compileRoutePattern($newPattern);
+                $varsStr = implode(',', $compiled['vars']);
+                createCodeFile($newKey, $varsStr);
+                // Add to editor list
+                $entry = 'tpl/code_' . $newKey . '.log';
+                if (!in_array($entry, $editorFiles)) {
+                    $editorFiles[] = $entry;
+                    file_put_contents($editorListFile, implode("\n", $editorFiles) . "\n", LOCK_EX);
+                }
+            }
+
+            // Add to draft
+            $compiled = compileRoutePattern($newPattern);
+            $varsStr = implode(',', $compiled['vars']);
+            $draftRoutes[] = [
+                'status'  => $newStatus,
+                'pattern' => $newPattern,
                 'key'     => $newKey,
-                'handler' => '',
+                'vars'    => $varsStr,
                 'remark'  => '',
             ];
 
-            // Auto-create page entry in site_pages.php
-            $pages = [];
-            if (file_exists($pagesFile)) {
-                $raw = include $pagesFile;
-                if (is_array($raw)) $pages = $raw;
+            $content = '';
+            foreach ($draftRoutes as $r) {
+                $content .= $r['status'] . '|' . $r['pattern'] . '|' . $r['key'] . '|' . $r['vars'] . '|' . $r['remark'] . "\n";
             }
-            if (!isset($pages[$newKey])) {
-                $pages[$newKey] = [
-                    'path'        => $newMatch,
-                    'title'       => $newKey,
-                    'description' => '',
-                    'content'     => '<h2>' . htmlspecialchars($newKey) . '</h2><p>Content pending edit...</p>',
-                ];
-                $pc = "<?php\n/**\n * Front-end Static Pages Config\n * Generated: " . date('Y-m-d H:i:s') . "\n */\n\nreturn [\n";
-                foreach ($pages as $k => $p) {
-                    $pc .= "    " . var_export($k, true) . " => [\n";
-                    $pc .= "        'path'        => " . var_export($p['path'], true) . ",\n";
-                    $pc .= "        'title'       => " . var_export($p['title'], true) . ",\n";
-                    $pc .= "        'description' => " . var_export($p['description'], true) . ",\n";
-                    $pc .= "        'content'     => " . var_export($p['content'], true) . ",\n";
-                    $pc .= "    ],\n";
-                }
-                $pc .= "];\n";
-                file_put_contents($pagesFile, $pc, LOCK_EX);
-            }
-        }
+            file_put_contents($routerLogFile, $content, LOCK_EX);
 
-        // Write to draft file
-        $content = '';
-        foreach ($newRoutes as $r) {
-            $content .= $r['status'] . '|' . $r['type'] . '|' . $r['match'] . '|' . $r['key'] . '|' . $r['handler'] . '|' . $r['remark'] . "\n";
-        }
-        if (file_put_contents($routerLogFile, $content, LOCK_EX) !== false) {
-            $message = 'Router draft saved';
-            $routes = $newRoutes;
-            writeSysLog(1, $authUserid . ' modified router draft');
-        } else {
-            $error = 'Save failed';
+            $message = 'Route added. Click Save to compile active routes.';
+            writeSysLog(1, $authUserid . ' added route: ' . $newPattern . ' -> ' . $newKey);
         }
     }
 
-    // ---- Validate and activate ----
-    if ($action === 'activate') {
-        $errors = [];
+    // ---- Save all ----
+    if ($action === 'save') {
+        $statuses  = $_POST['route_status'] ?? [];
+        $patterns  = $_POST['route_pattern'] ?? [];
+        $keys      = $_POST['route_key'] ?? [];
+        $types     = $_POST['route_type'] ?? [];
+        $remarks   = $_POST['route_remark'] ?? [];
+        $deletes   = $_POST['route_delete'] ?? [];
 
-        // Collect active routes
+        $newDraft = [];
         $activeRoutes = [];
-        foreach ($routes as $r) {
-            if ($r['status'] !== 1) continue;
-            $activeRoutes[] = $r;
+        $errors = [];
+        $pagesModified = false;
+        $editorModified = false;
+
+        foreach ($keys as $i => $key) {
+            $key = trim($key);
+            if (empty($key)) continue;
+
+            $status  = intval($statuses[$i] ?? 0);
+            $pattern = trim($patterns[$i] ?? '');
+            $type    = trim($types[$i] ?? 'page');
+            $remark  = trim($remarks[$i] ?? '');
+
+            if (empty($pattern)) continue;
+            if (isset($deletes[$i]) && $deletes[$i] === '1') $status = 0;
+
+            $compiled = compileRoutePattern($pattern);
+            $varsStr = implode(',', $compiled['vars']);
+
+            if ($status === 0) {
+                // Delete: remove page and code file
+                if (isset($existingPages[$key])) {
+                    unset($existingPages[$key]);
+                    $pagesModified = true;
+                }
+                removeCodeFile($key, $editorFiles);
+                $editorModified = true;
+                continue; // Don't add to draft
+            }
+
+            // New key: auto-create page config
+            if (!isset($existingPages[$key])) {
+                $existingPages[$key] = createDefaultPageConfig($key, $type);
+                $pagesModified = true;
+            }
+
+            // New code/paged/api: create code file
+            if (in_array($type, ['code', 'code_paged', 'api'])) {
+                $entry = 'tpl/code_' . $key . '.log';
+                createCodeFile($key, $varsStr);
+                if (!in_array($entry, $editorFiles)) {
+                    $editorFiles[] = $entry;
+                    $editorModified = true;
+                }
+            }
+
+            $newDraft[] = [
+                'status'  => $status,
+                'pattern' => $pattern,
+                'key'     => $key,
+                'vars'    => $varsStr,
+                'remark'  => $remark,
+            ];
+
+            if ($status === 2) {
+                $activeRoutes[] = [
+                    'match' => $compiled['match'],
+                    'key'   => $key,
+                    'vars'  => $compiled['vars'],
+                ];
+            }
         }
 
-        // Check duplicate matches
+        // Write page config if modified
+        if ($pagesModified) {
+            $pc = "<?php\n/**\n * Front-end Page Config\n * Generated: " . date('Y-m-d H:i:s') . "\n */\n\nreturn [\n";
+            foreach ($existingPages as $k => $p) {
+                $pc .= "    " . var_export($k, true) . " => [\n";
+                $pc .= "        'type'        => " . var_export($p['type'], true) . ",\n";
+                $pc .= "        'title'       => " . var_export($p['title'], true) . ",\n";
+                $pc .= "        'description' => " . var_export($p['description'], true) . ",\n";
+                $pc .= "        'content'     => " . var_export($p['content'], true) . ",\n";
+                $pc .= "    ],\n";
+            }
+            $pc .= "];\n";
+            file_put_contents($pagesFile, $pc, LOCK_EX);
+        }
+
+        // Write editor list if modified
+        if ($editorModified) {
+            file_put_contents($editorListFile, implode("\n", $editorFiles) . "\n", LOCK_EX);
+        }
+
+        // Write draft
+        $content = '';
+        foreach ($newDraft as $r) {
+            $content .= $r['status'] . '|' . $r['pattern'] . '|' . $r['key'] . '|' . $r['vars'] . '|' . $r['remark'] . "\n";
+        }
+        file_put_contents($routerLogFile, $content, LOCK_EX);
+        $draftRoutes = $newDraft;
+
+        // Check for removed pages (keys in existing but no longer in draft)
+        $draftKeys = array_column($newDraft, 'key');
+        foreach ($existingPages as $k => $p) {
+            if (!in_array($k, $draftKeys)) {
+                unset($existingPages[$k]);
+                $pagesModified = true;
+                removeCodeFile($k, $editorFiles);
+                $editorModified = true;
+            }
+        }
+        if ($pagesModified) {
+            $pc = "<?php\n/**\n * Front-end Page Config\n * Generated: " . date('Y-m-d H:i:s') . "\n */\n\nreturn [\n";
+            foreach ($existingPages as $k => $p) {
+                $pc .= "    " . var_export($k, true) . " => [\n";
+                $pc .= "        'type'        => " . var_export($p['type'], true) . ",\n";
+                $pc .= "        'title'       => " . var_export($p['title'], true) . ",\n";
+                $pc .= "        'description' => " . var_export($p['description'], true) . ",\n";
+                $pc .= "        'content'     => " . var_export($p['content'], true) . ",\n";
+                $pc .= "    ],\n";
+            }
+            $pc .= "];\n";
+            file_put_contents($pagesFile, $pc, LOCK_EX);
+        }
+        if ($editorModified) {
+            file_put_contents($editorListFile, implode("\n", $editorFiles) . "\n", LOCK_EX);
+        }
+
+        // Validate active routes
         $matchMap = [];
         foreach ($activeRoutes as $r) {
             $m = $r['match'];
             if (isset($matchMap[$m])) {
-                $errors[] = 'Duplicate route: ' . htmlspecialchars($m);
+                $errors[] = 'Duplicate match: ' . htmlspecialchars($m);
             }
             $matchMap[$m] = true;
-        }
-
-        // Check page key exists in site_pages.php
-        $pages = [];
-        if (file_exists($pagesFile)) {
-            $raw = include $pagesFile;
-            if (is_array($raw)) $pages = $raw;
-        }
-        foreach ($activeRoutes as $r) {
-            if ($r['type'] === 'page' && !isset($pages[$r['key']])) {
-                $errors[] = 'Static route key not found in site_pages.php: ' . htmlspecialchars($r['key']);
-            }
-        }
-
-        // Check handler exists
-        foreach ($activeRoutes as $r) {
-            if ($r['type'] !== 'page' && !empty($r['handler']) && !function_exists($r['handler'])) {
-                $errors[] = 'Handler function not found: ' . htmlspecialchars($r['handler']);
-            }
-        }
-
-        // Check dynamic routes without DB
-        if (!$hasDbConfig) {
-            foreach ($activeRoutes as $r) {
-                if ($r['type'] !== 'page') {
-                    $errors[] = 'No database configured, dynamic route cannot be activated: ' . htmlspecialchars($r['match']);
-                }
+            if (!isset($existingPages[$r['key']])) {
+                $errors[] = 'Page key not found: ' . htmlspecialchars($r['key']);
             }
         }
 
         if (!empty($errors)) {
-            $error = 'Validation failed, please fix:<br>' . implode('<br>', $errors);
+            $error = 'Save completed but route compilation FAILED:<br>' . implode('<br>', $errors);
         } else {
-            // Auto create empty config for missing pages
-            $needSavePages = false;
+            // Compile site_router.php
+            $rc = "<?php\n/**\n * Front-end Router Table\n * Generated: " . date('Y-m-d H:i:s') . "\n * Do not edit manually.\n */\n\nreturn [\n";
             foreach ($activeRoutes as $r) {
-                if ($r['type'] === 'page' && !isset($pages[$r['key']])) {
-                    $pages[$r['key']] = [
-                        'path'        => $r['match'],
-                    'title'       => 'Pending edit',
-                    'description' => '',
-                    'content'     => '<h2>' . htmlspecialchars($r['key']) . '</h2><p>Content pending edit...</p>',
-                    ];
-                    $needSavePages = true;
-                }
-            }
-            if ($needSavePages) {
-                $pc = "<?php\n/**\n * Front-end Static Pages Config\n * Generated: " . date('Y-m-d H:i:s') . "\n */\n\nreturn [\n";
-                foreach ($pages as $k => $p) {
-                    $pc .= "    " . var_export($k, true) . " => [\n";
-                    $pc .= "        'path'        => " . var_export($p['path'], true) . ",\n";
-                    $pc .= "        'title'       => " . var_export($p['title'], true) . ",\n";
-                    $pc .= "        'description' => " . var_export($p['description'], true) . ",\n";
-                    $pc .= "        'content'     => " . var_export($p['content'], true) . ",\n";
-                    $pc .= "    ],\n";
-                }
-                $pc .= "];\n";
-                file_put_contents($pagesFile, $pc, LOCK_EX);
-            }
-
-            // Compile to site_router.php
-            $rc = "<?php\n/**\n * Front-end Router Table\n * Generated: " . date('Y-m-d H:i:s') . "\n * Auto-generated by adm/router.php. Do not edit manually.\n */\n\nreturn [\n";
-            foreach ($activeRoutes as $r) {
-                if ($r['type'] === 'page') {
-                    $rc .= "    ['match' => " . var_export($r['match'], true) . ", 'type' => 'page', 'key' => " . var_export($r['key'], true) . "],\n";
-                } else {
-                    $rc .= "    ['match' => " . var_export($r['match'], true) . ", 'type' => " . var_export($r['type'], true) . ", 'handler' => " . var_export($r['handler'], true) . "],\n";
-                }
+                $match = var_export($r['match'], true);
+                $key   = var_export($r['key'], true);
+                $vars  = var_export($r['vars'], true);
+                $rc .= "    ['match' => $match, 'key' => $key, 'vars' => $vars],\n";
             }
             $rc .= "];\n";
 
             if (file_put_contents($routerPhpFile, $rc, LOCK_EX) !== false) {
-                $message = 'Router activated';
-                writeSysLog(1, $authUserid . ' activated route config');
+                $message = 'Saved and compiled ' . count($activeRoutes) . ' active routes';
+                writeSysLog(1, $authUserid . ' saved routes, ' . count($activeRoutes) . ' active');
             } else {
-                $error = 'Activation failed';
+                $error = 'Route compilation file write failed';
             }
         }
     }
@@ -252,185 +375,115 @@ include '../tpl/adm_head.log';
 <!-- Tabs -->
 <div class="card" style="padding-bottom:0;">
     <div class="tabs">
-        <span class="tab active">Routes</span>
-        <a href="pages.php?type=page" class="tab">Static</a>
-        <a href="pages.php?type=dynamic" class="tab">Dynamic</a>
-	<a href="nav.php" class="tab">Front Nav</a>
+        <span class="tab active">Pages</span>
+        <a href="pages.php" class="tab">Content</a>
+        <a href="nav.php" class="tab">Menu</a>
     </div>
 </div>
 
-<form method="post">
-    <div class="card">
-        <div class="card-title">Add Static Route</div>
-        <p class="text-muted mb-2" style="font-size:0.8rem;">New routes default to status 0, check to activate.</p>
+<!-- Add Route Form -->
+<div class="card">
+    <div class="card-title">Add Page</div>
+    <p class="text-muted mb-2" style="font-size:0.8rem;">
+        URL Pattern: use <code>{name}</code> for variables (letters), <code>{1}</code> for digits. <br>
+        <strong>page</strong> — static HTML &middot;
+        <strong>code</strong> — PHP logic + HTML &middot;
+        <strong>code_paged</strong> — code with pagination &middot;
+        <strong>api</strong> — JSON/plain response
+    </p>
+    <form method="post">
+        <input type="hidden" name="router_action" value="add">
         <div class="d-flex gap-2" style="flex-wrap:wrap;">
-            <div style="flex:1; min-width:120px;">
-                <label style="font-size:0.8rem;">Path</label>
-                <input type="text" name="new_match" placeholder="/help.html" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius);">
+            <div style="flex:2; min-width:180px;">
+                <label style="font-size:0.8rem;">URL Pattern</label>
+                <input type="text" name="new_pattern" placeholder="/about.html" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius);">
             </div>
             <div style="flex:1; min-width:120px;">
-                <label style="font-size:0.8rem;">Key</label>
-                <input type="text" name="new_key" placeholder="help" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius);">
+                <label style="font-size:0.8rem;">Page Key <span style="color:#999;font-weight:normal;">auto-fills for page</span></label>
+                <input type="text" name="new_key" placeholder="leave empty for auto" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius);">
+            </div>
+            <div style="flex:1; min-width:100px;">
+                <label style="font-size:0.8rem;">Type</label>
+                <select name="new_type" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius);">
+                    <option value="page" selected>page</option>
+                    <option value="code">code</option>
+                    <option value="code_paged">code_paged</option>
+                    <option value="api">api</option>
+                </select>
+            </div>
+            <div style="flex:1; min-width:100px;">
+                <label style="font-size:0.8rem;">Status</label>
+                <select name="new_status" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius);">
+                    <option value="2">Active</option>
+                    <option value="1" selected>Paused</option>
+                </select>
+            </div>
+            <div style="align-self:flex-end;">
+                <button type="submit" class="btn btn-primary" style="padding:8px 20px;" onclick="return confirm('Add this page?')">Add</button>
             </div>
         </div>
-        <div class="mt-2">
-            <button type="submit" name="router_action" value="save" class="btn btn-primary" onclick="return confirm('Confirm add route?')">Add</button>
-        </div>
-    </div>
+    </form>
+</div>
 
+<!-- Existing Routes -->
+<form method="post">
+    <input type="hidden" name="router_action" value="save">
     <div class="card">
-        <div class="card-title">Existing Routes</div>
+        <div class="card-title">All Pages</div>
+        <p class="text-muted mb-2" style="font-size:0.8rem;">Status: 2=Active, 1=Paused, 0=Delete. Active fields are read-only — pause first to edit.</p>
         <table>
             <thead>
                 <tr>
-                    <th style="width:50px;">Active</th>
+                    <th style="width:90px;">Status</th>
+                    <th>URL Pattern</th>
+                    <th style="width:100px;">Key</th>
                     <th style="width:70px;">Type</th>
-                    <th>Match</th>
-                    <th style="width:160px;">Key/Handler</th>
                     <th style="width:50px;">Del</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($routes as $i => $r):
-                    $isDynamic = ($r['type'] !== 'page');
-                    $disabled = ($isDynamic && !$hasDbConfig) ? 'disabled' : '';
-                    $statusTip = ($isDynamic && !$hasDbConfig) ? 'title="No database configured, dynamic route cannot be activated"' : '';
+                <?php if (empty($draftRoutes)): ?>
+                <tr><td colspan="5" class="text-muted text-center">No pages yet. Add one above.</td></tr>
+                <?php endif; ?>
+                <?php foreach ($draftRoutes as $i => $r):
+                    $pageExists = isset($existingPages[$r['key']]);
+                    $pageType = $pageExists ? ($existingPages[$r['key']]['type'] ?? 'page') : 'page';
+                    $statusColor = $r['status'] === 2 ? '#38a169' : ($r['status'] === 1 ? '#dd6b20' : '#e53e3e');
+                    $rowBg = $r['status'] === 0 ? 'style="background:#fff5f5;"' : '';
                 ?>
-                <?php
-                    // Build preview URL
-                    if ($r['type'] === 'page') {
-                        $previewUrl = $r['match'];
-                    } else {
-                        switch ($r['handler']) {
-                            case 'getTagPage':     $previewUrl = '/tag/example'; break;
-                            case 'getSearchPage':  $previewUrl = '/search?q=keyword'; break;
-                            case 'getArticlePage': $previewUrl = '/article/0000000000000.html'; break;
-                            case 'getCategoryPage':$previewUrl = '/category/example'; break;
-                            case 'getNewsPage':    $previewUrl = '/news/example'; break;
-                            case 'getInfoPage':    $previewUrl = '/info/0000000000000.html'; break;
-                            default:               $previewUrl = ''; break;
-                        }
-                    }
-                ?>
-                <tr>
-                    <td data-label="Active" class="text-center">
-                        <input type="checkbox" name="route_status[<?php echo $i; ?>]" value="1" <?php echo $r['status'] === 1 ? 'checked' : ''; ?> <?php echo $disabled; ?> <?php echo $statusTip; ?>>
+                <tr <?php echo $rowBg; ?>>
+                    <td data-label="Status">
+                        <select name="route_status[<?php echo $i; ?>]" style="width:100%; padding:6px; border:1px solid var(--border); border-radius:var(--radius); font-size:0.85rem; color:<?php echo $statusColor; ?>;">
+                            <option value="2" <?php echo $r['status'] === 2 ? 'selected' : ''; ?> style="color:#38a169;">Active</option>
+                            <option value="1" <?php echo $r['status'] === 1 ? 'selected' : ''; ?> style="color:#dd6b20;">Paused</option>
+                            <option value="0" <?php echo $r['status'] === 0 ? 'selected' : ''; ?> style="color:#e53e3e;">Delete</option>
+                        </select>
                     </td>
-                    <td data-label="Type"><?php echo htmlspecialchars($r['type']); ?></td>
-                    <td data-label="Match">
-                        <?php if ($isDynamic):
-                            // Dynamic route segmented display
-                            $matchStr = $r['match'];
-                            $prefix = '~^/';
-                            if (strpos($matchStr, $prefix) === 0) {
-                                $rest = substr($matchStr, strlen($prefix)); // e.g. "tag/([a-zA-Z0-9]+)$~"
-                                $slashPos = strpos($rest, '/');
-                                if ($slashPos !== false) {
-                                    $pathSeg = substr($rest, 0, $slashPos);       // "tag"
-                                    $suffix  = substr($rest, $slashPos);          // "/([a-zA-Z0-9]+)$~"
-                                } else {
-                                    $dollarPos = strpos($rest, '$');
-                                    if ($dollarPos !== false) {
-                                        $pathSeg = substr($rest, 0, $dollarPos);  // "search"
-                                        $suffix  = substr($rest, $dollarPos);     // "$~"
-                                    } else {
-                                        $pathSeg = $rest;
-                                        $suffix  = '';
-                                    }
-                                }
-                                echo '<span class="text-muted">' . htmlspecialchars($prefix) . '</span>';
-                                echo '<input type="hidden" name="route_match[' . $i . ']" value="' . htmlspecialchars($matchStr) . '">';
-                                echo '<input type="text" name="route_path_seg[' . $i . ']" value="' . htmlspecialchars($pathSeg) . '" style="width:80px; text-align:center;" onchange="var h=this.parentNode.querySelector(\'[name=route_match[' . $i . ']]\');h.value=\'~^/\'+this.value+\'' . htmlspecialchars($suffix, ENT_QUOTES) . '\';">';
-                                echo '<span class="text-muted">' . htmlspecialchars($suffix) . '</span>';
-                            } else {
-                                echo '<input type="text" name="route_match[' . $i . ']" value="' . htmlspecialchars($matchStr) . '" style="width:100%;">';
-                            }
-                        ?>
-                        <?php else: ?>
-                        <input type="text" name="route_match[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($r['match']); ?>" style="width:100%;">
+                    <td data-label="Pattern">
+                        <input type="hidden" name="route_type[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($pageType, ENT_QUOTES, 'UTF-8'); ?>">
+                        <input type="text" name="route_pattern[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($r['pattern'], ENT_QUOTES, 'UTF-8'); ?>" style="width:100%; padding:6px; border:1px solid var(--border); border-radius:var(--radius);<?php echo $r['status'] === 2 ? ' background:#f5f5f5;' : ''; ?>" <?php echo $r['status'] === 2 ? 'readonly' : ''; ?>>
+                        <?php if ($r['status'] === 2): $pv = resolvePreviewUrl($r['pattern']); ?>
+                        <a href="<?php echo htmlspecialchars($pv, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" style="font-size:0.75rem; margin-left:4px; white-space:nowrap;" title="Open preview">&#8599;</a>
                         <?php endif; ?>
                     </td>
-                    <td data-label="Key/Handler">
-                        <input type="hidden" name="route_type[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($r['type']); ?>">
-                        <input type="hidden" name="route_key[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($r['key']); ?>">
-                        <input type="hidden" name="route_handler[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($r['handler']); ?>">
-                        <?php if ($r['type'] === 'page'): ?>
-                            <a href="<?php echo htmlspecialchars($r['match']); ?>" target="_blank"><?php echo htmlspecialchars($r['key']); ?></a>
-                        <?php else: ?>
-                            <a href="<?php echo htmlspecialchars($previewUrl); ?>" target="_blank"><?php echo htmlspecialchars($r['handler']); ?></a>
-                        <?php endif; ?>
+                    <td data-label="Key">
+                        <input type="text" name="route_key[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($r['key'], ENT_QUOTES, 'UTF-8'); ?>" style="width:100%; padding:6px; border:1px solid var(--border); border-radius:var(--radius);<?php echo $r['status'] === 2 ? ' background:#f5f5f5;' : ''; ?>" <?php echo $r['status'] === 2 ? 'readonly' : ''; ?>>
+                    </td>
+                    <td data-label="Type">
+                        <span class="badge badge-<?php echo $pageType === 'api' ? 'danger' : ($pageType === 'page' ? 'default' : 'info'); ?>"><?php echo htmlspecialchars($pageType, ENT_QUOTES, 'UTF-8'); ?></span>
                     </td>
                     <td data-label="Del" class="text-center">
-                        <label><input type="checkbox" name="route_delete[<?php echo $i; ?>]" value="1"> Del</label>
+                        <input type="checkbox" name="route_delete[<?php echo $i; ?>]" value="1">
                     </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
-        <div class="mt-2 d-flex gap-2">
-            <button type="submit" name="router_action" value="save" class="btn btn-primary" onclick="return confirm('Changes saved. Click Activate to make routes effective.\n\nConfirm save draft?')">Save Draft</button>
-            <button type="submit" name="router_action" value="activate" class="btn btn-primary" onclick="return confirm('Confirm activate? This will overwrite the production router config.')">Activate</button>
+        <div class="mt-2">
+            <button type="submit" class="btn btn-primary" onclick="return confirm('Save all changes and compile active routes?')">Save</button>
         </div>
-        <p class="text-muted mt-1" style="font-size:0.8rem;">Save Draft saves changes to the draft file. Activate validates and writes to inc/site_router.php.</p>
+        <p class="text-muted mt-1" style="font-size:0.8rem;">Saves all changes. Active (status=2) routes are validated and compiled to inc/site_router.php.</p>
     </div>
 </form>
-
-<?php if (!$hasDbConfig): ?>
-<div class="alert alert-warning" style="background:#fff3cd; color:#856404; border:1px solid #ffeeba; padding:14px; border-radius:var(--radius); margin-top:16px;">
-    <strong>No database configured</strong> - dynamic routes are disabled.<br><br>
-    To enable dynamic routes:<br>
-    1. Create a database and tables<br>
-    2. Create <code>inc/sys_sql.php</code> (database config)<br>
-    3. Create <code>inc/sys_conn.php</code> (PDO connection)<br>
-    4. Enable dynamic routes in adm/router.php<br>
-    5. Implement handlers for each dynamic template
-    <br><br>
-    <strong>sys_sql.php example:</strong>
-    <pre style="background:#f8f9fa; padding:10px; border-radius:4px; font-size:0.8rem; overflow:auto;">&lt;?php
-return [
-    'db_name'    =&gt; 'your_db',
-    'db_host'    =&gt; 'localhost',
-    'db_user'    =&gt; 'root',
-    'db_pass'    =&gt; 'password',
-    'db_charset' =&gt; 'utf8mb4',
-];
-?&gt;</pre>
-    <strong>sys_conn.php example:</strong>
-    <pre style="background:#f8f9fa; padding:10px; border-radius:4px; font-size:0.8rem; overflow:auto;">&lt;?php
-$cfg = include __DIR__ . '/sys_sql.php';
-try {
-    $pdo = new PDO(
-        'mysql:host=' . $cfg['db_host'] . ';dbname=' . $cfg['db_name'] . ';charset=' . $cfg['db_charset'],
-        $cfg['db_user'],
-        $cfg['db_pass']
-    );
-    $pdo-&gt;setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    die('Database connection failed: ' . $e-&gt;getMessage());
-}
-?&gt;</pre>
-</div>
-<?php endif; ?>
-
-<div class="card" style="margin-top:16px;">
-    <div class="card-title">Nginx Rewrite Rules</div>
-    <p class="text-muted mb-2" style="font-size:0.8rem;">Copy to your Nginx config.</p>
-    <pre style="background:#f8f9fa; padding:14px; border-radius:var(--radius); font-size:0.8rem; overflow:auto; line-height:1.6;"># NoDB-WebBase Front-end rewrite
-location / {
-    try_files $uri $uri/ /index.php$is_args$args;
-}
-
-# Admin real path
-location /adm/ {
-    # no rewrite
-}
-
-# Protect .log files
-location ~* \.log$ {
-    deny all;
-    return 404;
-}
-</pre>
-</div>
 
 <?php include '../tpl/adm_foot.log'; ?>

@@ -52,4 +52,17 @@ include '../tpl/adm_head.log';
     </div>
 </div>
 
+<div class="card">
+    <div class="card-title">Announcements</div>
+    <pre style="background:#f8f9fa; padding:14px; border-radius:var(--radius); font-size:0.85rem; line-height:1.6; overflow:auto; white-space:pre-wrap; word-break:break-word;"><?php
+    $msgFile = __DIR__ . '/../tpl/adm_msg.log';
+    if (file_exists($msgFile)) {
+        echo htmlspecialchars(file_get_contents($msgFile), ENT_QUOTES, 'UTF-8');
+    } else {
+        echo 'No announcements.';
+    }
+    ?></pre>
+    <p class="text-muted mt-1" style="font-size:0.8rem;">Edit via <a href="sys.php?type=editor&edit=<?php echo urlencode('tpl/adm_msg.log'); ?>">File Editor</a>.</p>
+</div>
+
 <?php include '../tpl/adm_foot.log'; ?>
