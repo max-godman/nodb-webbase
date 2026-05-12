@@ -1,0 +1,4 @@
+<?php
+// Route variables: $matchedRoute['named_params']['fn'] from /article/{fn}.html
+$fn = $matchedRoute['named_params']['fn'] ?? '0000000000000';
+$detail_html = '<p>Article "' . htmlspecialchars($fn) . '" content coming soon.</p>';

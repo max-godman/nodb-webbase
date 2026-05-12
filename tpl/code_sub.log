@@ -1,0 +1,10 @@
+<?php
+// Example API-type page (must exit after output)
+header('Content-Type: application/json');
+$input = json_decode(file_get_contents('php://input'), true);
+echo json_encode([
+    'status' => 'ok',
+    'method' => $_SERVER['REQUEST_METHOD'],
+    'data'   => $input,
+]);
+exit;

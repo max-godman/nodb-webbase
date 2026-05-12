@@ -1,0 +1,4 @@
+<?php
+// Search keyword from query string
+$keyword = isset($_GET['q']) ? trim($_GET['q']) : '';
+$list_html = '<p>No results for "' . htmlspecialchars($keyword) . '".</p>';

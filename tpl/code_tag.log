@@ -1,0 +1,6 @@
+<?php
+// Route variables: {abc} from /tag/{abc}/{page}.html
+//                  {page} from /tag/{abc}/{page}.html
+$tagname = $matchedRoute['named_params']['abc'] ?? 'unknown';
+$page = $matchedRoute['named_params']['page'] ?? '1';
+$list_html = '<p>Page ' . htmlspecialchars($page) . ' for tag "' . htmlspecialchars($tagname) . '" — content pending.</p>';

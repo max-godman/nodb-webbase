@@ -1,0 +1,8 @@
+<?php
+// Example code-type page
+$form_html = '<form method="post"><input type="text" name="title" placeholder="Title"><br><textarea name="body" placeholder="Content"></textarea><br><button type="submit">Submit</button></form>';
+
+// Handle POST submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $form_html = '<p>Received: ' . htmlspecialchars($_POST['title'] ?? '') . '</p>';
+}

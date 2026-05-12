@@ -4,9 +4,9 @@
 <!-- Contact Info -->
 <footer class="site-footer">
     <div class="footer-inner">
-        <p class="footer-copy">&copy; <?php echo date('Y'); ?> {sys_site_name} All rights reserved.</p>
+        <p class="footer-copy">&copy; <?php echo date('Y'); ?> <a href="{sys_site_weburl}">{sys_site_name}</a>. All rights reserved.</p>
         <p class="footer-contact">
-            Contact: <a href="mailto:contact@example.com">contact@example.com</a>
+            Contact: {txt_web_about}
         </p>
     </div>
 </footer>
