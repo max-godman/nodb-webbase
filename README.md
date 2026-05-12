@@ -55,11 +55,11 @@ NoDB-WebBase/
 │   ├── nav.php             # Front-end menu management
 │   ├── links.php           # Friend links
 │   ├── pwd.php             # Password change
-│   ├── inc_level.log       # Permission level definitions
-│   └── inc_menu.log        # Admin menu data
+│   ├── inc_menu.log        # Admin menu data
 ├── data/                   # Data files
 │   ├── sql.log             # Table creation SQL scripts
 │   ├── editor_files.log    # Editable file list
+│   ├── inc_level.log       # Permission level definitions
 │   ├── site_router.log     # Route drafts
 │   ├── site_nav.log        # Front-end navigation
 │   └── sys_log.log         # System logs
@@ -206,6 +206,8 @@ Active route fields are read-only — set to Paused first to edit.
 | 12 | Supervisor | Supervisory operations |
 | 11 | Editor | Content editing |
 | 10 | Observer | Read-only access |
+| 1 | Paused | Account suspended |
+| 0 | To Delete | Marked for deletion |
 | <10 | Restricted | Login blocked |
 
 ---
@@ -281,11 +283,11 @@ NoDB-WebBase/
 │   ├── nav.php             # 菜单管理
 │   ├── links.php           # 友情链接
 │   ├── pwd.php             # 密码修改
-│   ├── inc_level.log       # 级别选项
-│   └── inc_menu.log        # 菜单数据
+│   ├── inc_menu.log        # 菜单数据
 ├── data/                   # 数据文件
 │   ├── sql.log             # 建表 SQL 脚本
 │   ├── editor_files.log    # 可编辑文件列表
+│   ├── inc_level.log       # 级别选项
 │   ├── site_router.log     # 路由草稿
 │   ├── site_nav.log        # 前端导航数据
 │   └── sys_log.log         # 系统日志
@@ -422,6 +424,8 @@ Active 状态下 Pattern 和 Key 只读，需先改为 Paused 才能编辑。
 | 12 | 主管 | 监管操作 |
 | 11 | 编辑 | 内容编辑 |
 | 10 | 观察员 | 只读访问 |
+| 1 | 暂停 | 账号暂停 |
+| 0 | 待删除 | 标记删除 |
 | <10 | 受限 | 禁止登录 |
 
 ---
