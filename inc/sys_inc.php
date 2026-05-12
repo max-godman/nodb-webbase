@@ -1342,7 +1342,7 @@ function getQueryString() {
  * @return array ['success' => true, 'path' => 'relative/path'] or ['error' => 'message']
  */
 function uploadImage($file, $targetName, $targetDir) {
-    $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+    $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'ico'];
     $maxSize     = 10 * 1024 * 1024;
     $maxDim      = 5000;
     $minDim      = 10;
@@ -1360,16 +1360,18 @@ function uploadImage($file, $targetName, $targetDir) {
         return ['error' => 'File too large (max 10MB)'];
     }
 
-    $info = @getimagesize($file['tmp_name']);
-    if ($info === false) {
-        return ['error' => 'Invalid image file'];
-    }
-    list($w, $h) = $info;
-    if ($w > $maxDim || $h > $maxDim) {
-        return ['error' => "Image dimensions ({$w}x{$h}) exceed max {$maxDim}px"];
-    }
-    if ($w < $minDim || $h < $minDim) {
-        return ['error' => "Image dimensions ({$w}x{$h}) below min {$minDim}px"];
+    if ($ext !== 'ico') {
+        $info = @getimagesize($file['tmp_name']);
+        if ($info === false) {
+            return ['error' => 'Invalid image file'];
+        }
+        list($w, $h) = $info;
+        if ($w > $maxDim || $h > $maxDim) {
+            return ['error' => "Image dimensions ({$w}x{$h}) exceed max {$maxDim}px"];
+        }
+        if ($w < $minDim || $h < $minDim) {
+            return ['error' => "Image dimensions ({$w}x{$h}) below min {$minDim}px"];
+        }
     }
 
     $destPath = rtrim($targetDir, '/\\') . DIRECTORY_SEPARATOR . $targetName;

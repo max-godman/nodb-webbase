@@ -9,35 +9,88 @@
  */
 
 // =====================================================================
+// URL Pattern Compilation
+// =====================================================================
+
+/**
+ * Compile a user-friendly URL pattern into a regex match and variable list
+ *
+ * Input:  /tag/{abc}
+ * Output: ['match' => '~^/tag/([^/]+)$~', 'vars' => ['abc']]
+ *
+ * Input:  /news/page/{1}
+ * Output: ['match' => '~^/news/page/(\d+)$~', 'vars' => ['1']]
+ *
+ * Input:  /about.html
+ * Output: ['match' => '/about.html', 'vars' => []]
+ *
+ * @param string $pattern URL pattern with {var} placeholders
+ * @return array ['match' => string, 'vars' => array]
+ */
+function compileRoutePattern($pattern) {
+    $pattern = trim($pattern);
+
+    if (strpos($pattern, '{') === false) {
+        return ['match' => $pattern, 'vars' => []];
+    }
+
+    preg_match_all('/\{(\w+)\}/', $pattern, $varMatches);
+    $vars = $varMatches[1];
+
+    $parts = preg_split('/\{(\w+)\}/', $pattern, -1, PREG_SPLIT_DELIM_CAPTURE);
+    $regexParts = [];
+    $isVar = false;
+    foreach ($parts as $p) {
+        if ($isVar) {
+            $regexParts[] = ctype_digit($p) ? '(\d+)' : '([^/]+)';
+        } else {
+            $regexParts[] = preg_quote($p, '~');
+        }
+        $isVar = !$isVar;
+    }
+
+    $match = '~^' . implode('', $regexParts) . '$~';
+    return ['match' => $match, 'vars' => $vars];
+}
+
+// =====================================================================
 // Route Matching
 // =====================================================================
 
 /**
  * Match route by REQUEST_URI
  *
- * @param string $uri Current request URI (without query string)
- * @param array  $routes Route table (site_router.php content)
- * @return array|false Matched route entry (with capture group params), or false on failure
+ * Supports exact match and regex match (regex starts with ~).
+ * Returns matched route with named_params filled from vars array.
+ *
+ * @param string $uri    Current request URI (without query string)
+ * @param array  $routes Route table (inc/site_router.php content)
+ * @return array|false   Matched route with params and named_params, or false
  */
 function matchRoute($uri, $routes) {
     $uri = rtrim($uri, '/');
-    // Special handling for root
     if ($uri === '') $uri = '/';
 
     foreach ($routes as $route) {
         $match = $route['match'];
+
         if (strpos($match, '~') === 0) {
-            // Regex match
             if (preg_match($match, $uri, $m)) {
                 $route['params'] = array_slice($m, 1);
+                $route['named_params'] = [];
+                if (!empty($route['vars'])) {
+                    foreach ($route['vars'] as $i => $name) {
+                        $route['named_params'][$name] = $route['params'][$i] ?? '';
+                    }
+                }
                 return $route;
             }
         } else {
-            // Exact match
             $matchTrim = rtrim($match, '/');
             $uriTrim = rtrim($uri, '/');
             if ($match === $uri || $matchTrim === $uriTrim) {
                 $route['params'] = [];
+                $route['named_params'] = [];
                 return $route;
             }
         }
@@ -50,9 +103,10 @@ function matchRoute($uri, $routes) {
 // =====================================================================
 
 /**
- * Read navigation items
+ * Read navigation items from data file
  *
- * Data format: sort|text|link|status (0=hidden/1=visible), compatible with old 3-segment format (default status=1)
+ * Data format: sort|text|link|status (0=hidden/1=visible)
+ * Compatible with old 3-segment format (default status=1)
  *
  * @param string $navFile Navigation data file path
  * @return array Each item contains sort, text, link, status
@@ -67,7 +121,7 @@ function getNavItems($navFile) {
             $parts = explode('|', $line);
             if (count($parts) < 3) continue;
             $status = isset($parts[3]) ? intval(trim($parts[3])) : 1;
-            if ($status !== 1) continue; // Only return active items
+            if ($status !== 1) continue;
             $items[] = [
                 'sort'   => intval(trim($parts[0])),
                 'text'   => trim($parts[1]),
@@ -76,158 +130,10 @@ function getNavItems($navFile) {
             ];
         }
     }
-    // Sort by order
     usort($items, function($a, $b) {
         return $a['sort'] <=> $b['sort'];
     });
     return $items;
-}
-
-// =====================================================================
-// Dynamic Page Handler (Stage 1 placeholder)
-// =====================================================================
-
-/**
- * Render dynamic template
- *
- * Reads template from inc/site_dynamic.php for corresponding handler,
- * replaces variables using $vars, supports {tagname} {keyword} {fn} {categoryname} {newsname} {content}
- *
- * @param string $handler Handler name (e.g. tag, search, article)
- * @param array  $vars    Variable mapping ['tagname'=>'php', 'content'=>'<p>list</p>']
- * @return array ['title', 'description', 'main']
- */
-function renderDynamicTemplate($handler, $vars) {
-    $tplFile = __DIR__ . '/site_dynamic.php';
-    $tplAll = file_exists($tplFile) ? include $tplFile : [];
-    if (!is_array($tplAll)) $tplAll = [];
-
-    $tpl = isset($tplAll[$handler]) ? $tplAll[$handler] : ['title' => $handler, 'description' => '', 'content' => '{content}'];
-
-    $keys = [];
-    $vals = [];
-    foreach ($vars as $k => $v) {
-        $keys[] = '{' . $k . '}';
-        $vals[] = $v;
-    }
-
-    $title = str_replace($keys, $vals, $tpl['title'] ?? $handler);
-    $desc  = str_replace($keys, $vals, $tpl['description'] ?? '');
-    $main  = str_replace($keys, $vals, $tpl['content'] ?? '{content}');
-
-    return [
-        'title'       => $title,
-        'description' => $desc,
-        'main'        => $main,
-    ];
-}
-
-/**
- * Tag Page
- *
- * @param string $slug Tag slug
- * @return array ['title', 'description', 'main']
- */
-function getTagPage($slug) {
-    $safeSlug = htmlspecialchars($slug, ENT_QUOTES, 'UTF-8');
-    $placeholder = '<div class="content-wrap">'
-        . '<div class="content-main"><p>No articles yet.</p></div>'
-        . '<aside class="content-sidebar"><div class="widget"><h3>Sidebar</h3><p>Popular tags, recent articles</p></div></aside>'
-        . '</div>';
-    return renderDynamicTemplate('tag', [
-        'tagname' => $safeSlug,
-        'content' => $placeholder,
-    ]);
-}
-
-/**
- * Search Page
- *
- * @param string $keyword Search keyword
- * @return array ['title', 'description', 'main']
- */
-function getSearchPage($keyword = '') {
-    $safeKw = htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8');
-    $placeholder = '<div class="content-wrap">'
-        . '<div class="content-main"><p>Search coming soon.</p></div>'
-        . '<aside class="content-sidebar"><div class="widget"><h3>Sidebar</h3><p>Popular tags</p></div></aside>'
-        . '</div>';
-    return renderDynamicTemplate('search', [
-        'keyword' => $safeKw,
-        'content' => $placeholder,
-    ]);
-}
-
-/**
- * Article Detail Page
- *
- * @param string $fn Article code (13 digits)
- * @return array ['title', 'description', 'main']
- */
-function getArticlePage($fn) {
-    $safeFn = htmlspecialchars($fn, ENT_QUOTES, 'UTF-8');
-    $placeholder = '<div class="content-wrap">'
-        . '<div class="content-main"><p>Article content coming soon.</p></div>'
-        . '<aside class="content-sidebar"><div class="widget"><h3>Sidebar</h3><p>Related articles</p></div></aside>'
-        . '</div>';
-    return renderDynamicTemplate('article', [
-        'fn'      => $safeFn,
-        'content' => $placeholder,
-    ]);
-}
-
-/**
- * Category Page (reserved)
- *
- * @param string $slug Category slug
- * @return array ['title', 'description', 'main']
- */
-function getCategoryPage($slug) {
-    $safeSlug = htmlspecialchars($slug, ENT_QUOTES, 'UTF-8');
-    $placeholder = '<div class="content-wrap">'
-        . '<div class="content-main"><p>No content yet.</p></div>'
-        . '<aside class="content-sidebar"><div class="widget"><h3>Sidebar</h3><p>Popular categories</p></div></aside>'
-        . '</div>';
-    return renderDynamicTemplate('category', [
-        'categoryname' => $safeSlug,
-        'content'      => $placeholder,
-    ]);
-}
-
-/**
- * News Page (reserved)
- *
- * @param string $slug News category slug
- * @return array ['title', 'description', 'main']
- */
-function getNewsPage($slug) {
-    $safeSlug = htmlspecialchars($slug, ENT_QUOTES, 'UTF-8');
-    $placeholder = '<div class="content-wrap">'
-        . '<div class="content-main"><p>No news yet.</p></div>'
-        . '<aside class="content-sidebar"><div class="widget"><h3>Sidebar</h3><p>Popular news</p></div></aside>'
-        . '</div>';
-    return renderDynamicTemplate('news', [
-        'newsname' => $safeSlug,
-        'content'  => $placeholder,
-    ]);
-}
-
-/**
- * Info Detail Page (reserved)
- *
- * @param string $fn Info code (13 digits)
- * @return array ['title', 'description', 'main']
- */
-function getInfoPage($fn) {
-    $safeFn = htmlspecialchars($fn, ENT_QUOTES, 'UTF-8');
-    $placeholder = '<div class="content-wrap">'
-        . '<div class="content-main"><p>Info content coming soon.</p></div>'
-        . '<aside class="content-sidebar"><div class="widget"><h3>Sidebar</h3><p>Related info</p></div></aside>'
-        . '</div>';
-    return renderDynamicTemplate('info', [
-        'fn'      => $safeFn,
-        'content' => $placeholder,
-    ]);
 }
 
 // =====================================================================
@@ -237,13 +143,14 @@ function getInfoPage($fn) {
 /**
  * Replace {key_name} placeholders with values from sys_config.php and sys_ui.php
  *
- * Iterates $sysConfig and $sysUi, skipping _txt/_locked suffix keys.
- * Applies after all other template replacements (e.g. {tagname}, {keyword}).
+ * Skips _txt/_locked suffix keys. Supports extra replacements (e.g. {site:links}).
+ * Called AFTER {code:xxx} replacement has already been applied.
  *
- * @param string $content  Content string containing {key_name} placeholders
- * @param array  $sysConfig System configuration array (inc/sys_config.php)
- * @param array  $sysUi     UI text array (inc/sys_ui.php)
- * @return string Content with all placeholders replaced
+ * @param string $content          Content string with {key_name} placeholders
+ * @param array  $sysConfig        System configuration array
+ * @param array  $sysUi            UI text array
+ * @param array  $extraReplacements Additional replacements like ['site:links' => '<ul>...']
+ * @return string Content with placeholders replaced
  */
 function applySysPlaceholders($content, $sysConfig, $sysUi, $extraReplacements = []) {
     $search = [];
