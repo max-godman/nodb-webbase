@@ -51,7 +51,8 @@
 - `data/site_router.log` — Default routes: index→Paused, removed category/news/info, tag→paged format, added post/sub
 - `inc/site_router.php` — Recompiled (only about + terms active)
 - `inc/site_pages.php` — Removed category/news/info, added post/sub
-- `data/editor_files.log` — Synced with current code files
+- `data/editor_files.log` — Synced with current code files; added `data` to File Editor allowed dirs
+- `inc_level.log` — Moved from `adm/` to `data/` (editable via File Editor)
 
 **Deleted files:**
 - `tpl/code_category.log`, `tpl/code_news.log`, `tpl/code_info.log` — Removed with their routes
@@ -110,7 +111,8 @@
 - `data/site_router.log` — Default routes: index→Paused, removed category/news/info, tag→paged `/tag/{abc}/{page}.html`, added post/sub examples
 - `inc/site_router.php` — Recompiled (only about + terms active)
 - `inc/site_pages.php` — Removed category/news/info, added post/sub
-- `data/editor_files.log` — Synced with current code files
+- `data/editor_files.log` — Synced with current code files; added `data` to File Editor allowed dirs
+- `inc_level.log` — Moved from `adm/` to `data/` (editable via File Editor)
 
 **Deleted files:**
 - `tpl/code_category.log`, `tpl/code_news.log`, `tpl/code_info.log` — Removed with their routes
