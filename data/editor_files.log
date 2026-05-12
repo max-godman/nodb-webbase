@@ -4,3 +4,9 @@ tpl/adm_head.log
 tpl/adm_foot.log
 tpl/front_head.log
 tpl/front_foot.log
+tpl/code_tag.log
+tpl/code_search.log
+tpl/code_article.log
+tpl/code_post.log
+tpl/code_sub.log
+tpl/adm_msg.log
