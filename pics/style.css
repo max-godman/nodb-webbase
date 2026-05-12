@@ -61,7 +61,7 @@ p { margin: 0 0 1em; }
     justify-content: space-between;
 }
 .site-logo {
-    width: 120px;
+    width: 150px;
     height: 32px;
     background-image: url('logo.png');
     background-size: contain;
