@@ -1,0 +1,10 @@
+<?php
+$sysLevelOpts = [
+    0 => 'To Delete',
+    1 => 'Paused',
+    10 => 'Observer',
+    11 => 'Editor',
+    12 => 'Supervisor',
+    15 => 'Admin',
+    20 => 'Super Admin',
+];
