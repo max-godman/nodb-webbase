@@ -483,6 +483,10 @@ $phpVersion = PHP_VERSION;
                         <div class="test-label">getTminute() <small>Current minute</small></div>
                         <div class="test-value"><?php echo getTminute(); ?></div>
                     </div>
+                    <div class="test-item">
+                        <div class="test-label">getTdayShort() <small>6-digit yymmdd</small></div>
+                        <div class="test-value"><?php echo getTdayShort(); ?></div>
+                    </div>
                 </div>
             </div>
         </div>

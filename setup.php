@@ -510,7 +510,7 @@ $defaultDomain = getRootDomain($defaultDomain);
                 <div class="section-title">Admin Config</div>
                 <div class="info-box">
                     <strong>Auto-generated:</strong><br>
-                    Password: username+6-digit date (SHA256)<br>
+                    Password: <code>username + <?php echo getTdayShort(); ?></code> (e.g. admin<?php echo getTdayShort(); ?>)<br>
                     Dynamic value: 10-digit yymmddhhmm<br>
                     Account level: 20 (Super Admin)
                 </div>
@@ -526,7 +526,7 @@ $defaultDomain = getRootDomain($defaultDomain);
                 <div class="form-group">
                     <label for="userdomain">
                         Admin Domain
-                        <span>(for login validation)</span>
+                        <span>(for login validation, do NOT include http:// or www)</span>
                     </label>
                     <input type="text" id="userdomain" name="userdomain" 
                            value="<?php echo isset($_POST['userdomain']) ? htmlspecialchars($_POST['userdomain']) : htmlspecialchars($defaultDomain); ?>" 
@@ -566,10 +566,11 @@ $defaultDomain = getRootDomain($defaultDomain);
                     </select>
                 </div>
             </div>
+            <?php if (file_exists(__DIR__ . '/data/sql.log')): ?>
             <div class="section">
                 <div class="section-title">Database Config</div>
                 <div class="info-box">
-                    <strong>Note:</strong> If you need to generate a database connection program, please place the executable table creation script in <code>data/sql.log</code>.
+                    <strong>Note:</strong> Place the executable table creation script in <code>data/sql.log</code> to auto-create tables during setup.
                 </div>
                 <?php if ($needDatabase): ?>
                 <div class="form-group">
@@ -598,6 +599,7 @@ $defaultDomain = getRootDomain($defaultDomain);
                 </div>
                 <?php endif; ?>
             </div>
+            <?php endif; ?>
             <button type="submit" class="submit-btn">Start Setup</button>
         </form>
         <div class="footer">NoDB-WebBase &copy; <?php echo date('Y'); ?></div>
