@@ -8,7 +8,7 @@ $pageTitle = 'System Settings';
 $pageLevel = 20;
 require_once '../inc/auth.php';
 require_once '../inc/inc_sha.php';
-include __DIR__ . '/inc_level.log';
+include __DIR__ . '/../data/inc_level.log';
 
 $type = isset($_GET['type']) ? $_GET['type'] : 'info';
 $message = '';
@@ -425,7 +425,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ---- File Editor: add / remove / save ----
     if ($postType === 'editor') {
         $editorFile = __DIR__ . '/../data/editor_files.log';
-        $allowedDirs = ['pics', 'tpl'];
+        $allowedDirs = ['pics', 'tpl', 'data'];
         $editorAction = $_POST['editor_action'] ?? '';
 
         if ($editorAction === 'add') {
@@ -947,7 +947,7 @@ include '../tpl/adm_head.log';
     <!-- File Editor -->
     <?php
         $editorFile = __DIR__ . '/../data/editor_files.log';
-        $allowedDirs = ['pics', 'tpl'];
+        $allowedDirs = ['pics', 'tpl', 'data'];
 
         $fileList = [];
         if (file_exists($editorFile)) {
