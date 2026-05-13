@@ -156,7 +156,7 @@ function getStatementType($sql) {
     if (empty($sql)) return 'UNKNOWN';
 
     $firstWord = strtoupper(strtok($sql, " \t\n\r\0\x0B("));
-    $knownTypes = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRUNCATE', 'SHOW', 'DESCRIBE', 'EXPLAIN', 'REPLACE', 'RENAME', 'CALL', 'SET', 'BEGIN', 'COMMIT', 'ROLLBACK', 'START', 'SAVEPOINT', 'LOCK', 'UNLOCK', 'GRANT', 'REVOKE', 'OPTIMIZE', 'ANALYZE', 'CHECK', 'REPAIR', 'USE'];
+    $knownTypes = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRUNCATE', 'SHOW', 'DESC', 'DESCRIBE', 'EXPLAIN', 'REPLACE', 'RENAME', 'CALL', 'SET', 'BEGIN', 'COMMIT', 'ROLLBACK', 'START', 'SAVEPOINT', 'LOCK', 'UNLOCK', 'GRANT', 'REVOKE', 'OPTIMIZE', 'ANALYZE', 'CHECK', 'REPAIR', 'USE'];
 
     if (in_array($firstWord, $knownTypes)) {
         return $firstWord;
@@ -220,9 +220,10 @@ function extractTableName($sql) {
             }
             break;
 
+        case 'DESC':
         case 'DESCRIBE':
         case 'EXPLAIN':
-            if (preg_match('~\bDESCRIBE\s+`?(\w+)`?\b~i', $sql, $m)) {
+            if (preg_match('~\bDESC(?:RIBE)?\s+`?(\w+)`?\b~i', $sql, $m)) {
                 $tables[] = $m[1];
             }
             if (preg_match('~\bEXPLAIN\s+`?(\w+)`?\b~i', $sql, $m)) {
@@ -295,6 +296,7 @@ function checkTablePermission($stmtType, $tables) {
             break;
         case 'SELECT':
         case 'SHOW':
+        case 'DESC':
         case 'DESCRIBE':
         case 'EXPLAIN':
         case 'OPTIMIZE':
@@ -370,7 +372,7 @@ function executeSqlStatement($pdo, $sql) {
         $typeUpper = strtoupper($type);
 
         // For SELECT, SHOW, DESCRIBE, EXPLAIN use query() and fetch
-        if (in_array($typeUpper, ['SELECT', 'SHOW', 'DESCRIBE', 'EXPLAIN'])) {
+        if (in_array($typeUpper, ['SELECT', 'SHOW', 'DESC', 'DESCRIBE', 'EXPLAIN'])) {
             $stmt = $pdo->query($sql);
             $result['data'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $result['affected_rows'] = count($result['data']);
