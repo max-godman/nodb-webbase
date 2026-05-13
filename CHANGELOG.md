@@ -1,5 +1,65 @@
 # Changelog
 
+## [1.0.2] - 2026-05-13
+
+### Changed: File Editor extension whitelist + auto-create empty file on add
+
+**Core changes:**
+- New `data/editor_file_type.log` — defines allowed file extensions (one per line, sorted: css, html, log, txt)
+- `data/editor_file_type.log` auto-registered in File Editor editable list for manual maintenance
+- `adm/sys.php` editor_action=add now validates extension against the whitelist before adding
+- If target file doesn't exist on disk, an empty file is automatically created in the selected directory
+- Extension-less files are rejected with a clear error message
+
+**New files:**
+- `data/editor_file_type.log` — Allowed file extension list for File Editor
+
+**Modified files:**
+- `adm/sys.php` — Extension validation + auto-create empty file on add (lines 446-498)
+- `data/editor_files.log` — Registered `editor_file_type.log` for editing
+
+
+### 变更：文件编辑器扩展名白名单 + 添加时自动创建空文件
+
+**核心变化：**
+- 新增 `data/editor_file_type.log` — 定义允许的文件扩展名（每行一个，排序：css, html, log, txt）
+- `data/editor_file_type.log` 自动注册到 File Editor 可编辑列表，支持手动维护
+- `adm/sys.php` 的 `editor_action=add` 现在先校验扩展名是否在白名单中，再允许添加
+- 如果目标文件在磁盘上不存在，自动在选定目录创建空文件
+- 无扩展名的文件直接拒绝，并有清晰的错误提示
+
+**新增文件：**
+- `data/editor_file_type.log` — File Editor 允许的扩展名列表
+
+**修改文件：**
+- `adm/sys.php` — 扩展名校验 + 添加时自动创建空文件（第 446-498 行）
+- `data/editor_files.log` — 注册 `editor_file_type.log` 到可编辑列表
+
+
+## [1.0.1] - 2026-05-13
+
+### Changed: Move sys_log.log from data/ to inc/
+
+**Reason:**
+- Prevent sys_log.log from being editable via `adm/sys.php?type=editor` (File Editor)
+- The `data/` directory is registered in File Editor's allowed directories, making `data/sys_log.log` modifiable from admin panel
+- Moving to `inc/` removes it from File Editor scope, protecting log integrity
+
+**Modified files:**
+- `inc/sys_inc.php` — Changed default log path in `writeSysLog()` and `readSysLog()` from `__DIR__ . '/../data/sys_log.log'` to `__DIR__ . '/sys_log.log'`
+- `README.md` — Updated directory listings (EN & CN)
+
+### 变更：系统日志 sys_log.log 从 data/ 移至 inc/
+
+**原因：**
+- 防止 sys_log.log 被 `adm/sys.php?type=editor`（文件编辑器）修改
+- `data/` 目录注册在 File Editor 可编辑目录中，导致 `data/sys_log.log` 可在后台被修改
+- 移至 `inc/` 后脱离 File Editor 范围，保护日志完整性
+
+**修改文件：**
+- `inc/sys_inc.php` — `writeSysLog()` 和 `readSysLog()` 默认日志路径从 `__DIR__ . '/../data/sys_log.log'` 改为 `__DIR__ . '/sys_log.log'`
+- `README.md` — 更新目录结构（英文和中文）
+
 ## [1.0.0] - 2026-05-13
 
 ### New: SQL Management — Database config + SQL executor + protected table whitelist
@@ -50,25 +110,57 @@
 
 **Core changes:**
 - New `type=addpage` tab in `adm/sys.php` — Creates admin files from a form
-- Generates `adm/add_{name}.php` (controller with auth) + `data/add_{name}.log` (content template)
-- Auto-registers `.log` in File Editor editable list
-- Optional auto-add menu entry (Level 20) to `adm/inc_menu.log`
+- Generates `adm/add_{name}.php` (controller with `$pageLevel + auth`) + `data/add_{name}.log` (template with head/foot, `$pageTitle` at top)
+- Auto-registers every new `.log` in File Editor editable list
 - On success: redirects to File Editor for immediate `.log` editing
+- All created pages auto-register to `data/add_menu.log` (auto-created on first use)
+- `data/add_menu.log` includes an "Edit" link to itself on creation, registered in File Editor
+- `data/add_menu.log` menu auto-loaded and displayed on all `sys.php` sub-tabs
+- Generated `add_*.php` pages also load and display the same menu bar (absent menu = no display)
+- `$pageLevel = 20` stays in `.php` controller (before auth), `$pageTitle` in `.log`
 
 **Modified files:**
-- `adm/sys.php` — New tab link, POST handler, form UI
+- `adm/sys.php` — New tab link, POST handler, form UI; loading + display of `data/add_menu.log`
 
 ### 新增：添加后台文件 — 自动生成后台页面
 
 **核心变化：**
 - `adm/sys.php` 新增 `type=addpage` 标签页 — 表单创建后台管理文件
-- 生成 `adm/add_{name}.php`（含 auth 的控制器）+ `data/add_{name}.log`（内容模板）
-- 自动将 `.log` 注册到 File Editor 可编辑列表
-- 可选自动添加菜单项（级别 20）到 `adm/inc_menu.log`
+- 生成 `adm/add_{name}.php`（含 `$pageLevel + auth` 的控制器）+ `data/add_{name}.log`（含头尾模板，`$pageTitle` 置顶）
+- 每次创建自动将 `.log` 注册到 File Editor 可编辑列表
 - 创建成功跳转到 File Editor 立即编辑 `.log`
+- 所有创建的页面自动注册到 `data/add_menu.log`（首次自动创建）
+- `data/add_menu.log` 首次创建时自带 "Edit" 编辑链接，并注册到 File Editor
+- `data/add_menu.log` 菜单自动加载到 `sys.php` 所有子栏页面顶部
+- 生成的 `add_*.php` 页面同样加载并显示该菜单（无菜单文件时不显示）
+- `$pageLevel = 20` 留在 `.php` 控制器（在 auth 前面），`$pageTitle` 在 `.log` 中
 
 **修改文件：**
-- `adm/sys.php` — 新 Tab、POST handler、表单界面
+- `adm/sys.php` — 新 Tab、POST handler、表单 UI；加载和显示 `data/add_menu.log`
+
+---
+
+### New: System Functions Test in msg.php
+
+**Core changes:**
+- Copied all 20 test sections from `test.php` into `adm/msg.php` as a collapsible card group
+- Includes: PHP extensions, image upload env, domain/email/IP/geo, UUID, time functions, device/browser detection, date formats, input filtering, other common functions, JSON
+- Uses admin panel template styling (cards/tables) instead of standalone HTML
+- `sys_inc.php` already loaded via `auth.php` — no additional includes needed
+
+**Modified files:**
+- `adm/msg.php` — Added System Functions Test card (69 → 290 lines)
+
+### 新增：msg.php 集成系统函数测试
+
+**核心变化：**
+- 将 `test.php` 全部 20 个测试区块复制到 `adm/msg.php` 作为可展开的卡片组
+- 包括：PHP 扩展、图片上传环境、域名/邮箱/IP/地理位置、UUID、时间函数、设备/浏览器检测、日期格式、输入过滤、其他常用函数、JSON
+- 使用后台模板样式（卡片/表格）替代独立 HTML
+- `auth.php` 已加载 `sys_inc.php` — 无需额外引入
+
+**修改文件：**
+- `adm/msg.php` — 新增系统函数测试卡片（69 → 290 行）
 
 ## [0.9.0] - 2026-05-12
 
