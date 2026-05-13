@@ -911,7 +911,18 @@ include '../tpl/adm_head.log';
             $isLocked = isset($paramsConfig[$key . '_locked']) ? intval($paramsConfig[$key . '_locked']) : 0;
             $paramEntries[] = ['key' => $key, 'value' => $value, 'label' => $label, 'locked' => $isLocked];
         }
-    ?>
+    if (isset($_GET['output']) && $_GET['output'] === '1') {
+        ?>
+    <div class="card">
+        <div class="card-title">Batch Output - System Params</div>
+        <pre style="background:#f5f5f5;padding:16px;border-radius:var(--radius);font-size:0.875rem;line-height:1.8;overflow-x:auto;"><?php
+        foreach ($paramEntries as $e) {
+            echo htmlspecialchars($e['label'] . "\t\t\t\t" . $e['key'] . "\t\t\t\t" . $e['value']) . "\n";
+        }
+        ?></pre>
+        <a href="?type=params" class="btn btn-primary mt-2">Back</a>
+    </div>
+    <?php } else { ?>
     <div class="card">
         <div class="card-title">Edit System Params</div>
         <p class="text-muted mb-2" style="font-size:0.8rem;color:#856404;background:#fff3cd;padding:10px 14px;border-radius:var(--radius);border:1px solid #ffeeba;">
@@ -962,8 +973,10 @@ include '../tpl/adm_head.log';
                 </tbody>
             </table>
             <button type="submit" class="btn btn-primary mt-2" onclick="return confirm('Confirm save params?')">Save</button>
+            <a href="?type=params&output=1" class="btn btn-secondary mt-2" style="margin-left:8px;">Output</a>
         </form>
     </div>
+    <?php } ?>
     <style>
         .input-locked { background-color: #f3f4f6; color: #6b7280; cursor: not-allowed; }
         .hint-row td { padding: 4px 12px 12px !important; border-top: none !important; }
@@ -989,7 +1002,18 @@ include '../tpl/adm_head.log';
             $isLocked = isset($uiConfig[$key . '_locked']) ? intval($uiConfig[$key . '_locked']) : 0;
             $uiEntries[] = ['key' => $key, 'value' => $value, 'label' => $label, 'locked' => $isLocked];
         }
-    ?>
+    if (isset($_GET['output']) && $_GET['output'] === '1') {
+        ?>
+    <div class="card">
+        <div class="card-title">Batch Output - UI Text</div>
+        <pre style="background:#f5f5f5;padding:16px;border-radius:var(--radius);font-size:0.875rem;line-height:1.8;overflow-x:auto;"><?php
+        foreach ($uiEntries as $e) {
+            echo htmlspecialchars($e['label'] . "\t\t\t\t" . $e['key'] . "\t\t\t\t" . $e['value']) . "\n";
+        }
+        ?></pre>
+        <a href="?type=ui" class="btn btn-primary mt-2">Back</a>
+    </div>
+    <?php } else { ?>
     <div class="card">
         <div class="card-title">Edit UI Text</div>
         <p class="text-muted mb-2" style="font-size:0.8rem;color:#856404;background:#fff3cd;padding:10px 14px;border-radius:var(--radius);border:1px solid #ffeeba;">
@@ -1040,8 +1064,10 @@ include '../tpl/adm_head.log';
                 </tbody>
             </table>
             <button type="submit" class="btn btn-primary mt-2" onclick="return confirm('Confirm save UI text?')">Save</button>
+            <a href="?type=ui&output=1" class="btn btn-secondary mt-2" style="margin-left:8px;">Output</a>
         </form>
     </div>
+    <?php } ?>
     <style>
         .hint-row td { padding: 4px 12px 12px !important; border-top: none !important; }
         .hint-row code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 0.8rem; }
@@ -1551,6 +1577,26 @@ include '../tpl/adm_head.log';
                     <tr>
                         <td data-label="Type"><code>DELETE</code></td>
                         <td data-label="Example"><code>DELETE FROM table_name WHERE id = 1</code></td>
+                    </tr>
+                    <tr>
+                        <td data-label="Type"><code>SHOW TABLES</code></td>
+                        <td data-label="Example"><code>SHOW TABLES</code></td>
+                    </tr>
+                    <tr>
+                        <td data-label="Type"><code>DESC</code></td>
+                        <td data-label="Example"><code>DESC table_name</code></td>
+                    </tr>
+                    <tr>
+                        <td data-label="Type"><code>SHOW CREATE TABLE</code></td>
+                        <td data-label="Example"><code>SHOW CREATE TABLE table_name</code></td>
+                    </tr>
+                    <tr>
+                        <td data-label="Type"><code>SHOW INDEX</code></td>
+                        <td data-label="Example"><code>SHOW INDEX FROM table_name</code></td>
+                    </tr>
+                    <tr>
+                        <td data-label="Type"><code>SELECT COUNT</code></td>
+                        <td data-label="Example"><code>SELECT COUNT(*) FROM table_name</code></td>
                     </tr>
                 </tbody>
             </table>
