@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.0.3] - 2026-05-13
+
+### Changed: Support DESC shorthand in SQL executor + add Common SQL Examples
+
+**Core changes:**
+- `inc/sys_sql_func.php` — Added `DESC` to `getStatementType()` `$knownTypes`, `extractTableName()` switch case (with regex `DESC(?:RIBE)?`), `checkTablePermission()` level-5 read switch, and `executeSqlStatement()` query-branch `in_array()`
+- `adm/sys.php` — Added 5 rows to Common SQL Examples table: `SHOW TABLES`, `DESC`, `SHOW CREATE TABLE`, `SHOW INDEX`, `SELECT COUNT`
+
+**Modified files:**
+- `inc/sys_sql_func.php` — DESC support in 4 locations (lines 159, 223, 299, 373)
+- `adm/sys.php` — Common SQL Examples table (lines 1582-1606)
+
+### 变更：SQL执行器支持 DESC 简写 + 新增常用 SQL 范例
+
+**核心变化：**
+- `inc/sys_sql_func.php` — 在 4 个位置加入 `DESC` 支持：`getStatementType()` 的 `$knownTypes`、`extractTableName()` 的 switch case（正则 `DESC(?:RIBE)?`）、`checkTablePermission()` 的级别5查询开关、`executeSqlStatement()` 的 query 分支 `in_array()`
+- `adm/sys.php` — 常用命令范例表新增 5 行：`SHOW TABLES`、`DESC`、`SHOW CREATE TABLE`、`SHOW INDEX`、`SELECT COUNT`
+
+**修改文件：**
+- `inc/sys_sql_func.php` — 4 处加入 DESC 支持
+- `adm/sys.php` — 常用命令范例表新增 5 行
+
 ## [1.0.2] - 2026-05-13
 
 ### Changed: File Editor extension whitelist + auto-create empty file on add
