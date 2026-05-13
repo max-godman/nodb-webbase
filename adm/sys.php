@@ -451,25 +451,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif (!in_array($dir, $allowedDirs)) {
                 $error = 'Invalid directory';
             } else {
-                $entry = $dir . '/' . $file;
-                $fileList = [];
-                if (file_exists($editorFile)) {
-                    $lines = file($editorFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                // Check file extension against allowed types
+                $typeFile = __DIR__ . '/../data/editor_file_type.log';
+                $allowedExts = [];
+                if (file_exists($typeFile)) {
+                    $lines = file($typeFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
                     foreach ($lines as $line) {
                         $line = trim($line);
-                        if (!empty($line)) $fileList[] = $line;
+                        if (!empty($line)) $allowedExts[] = $line;
                     }
                 }
-                if (in_array($entry, $fileList)) {
-                    $error = 'File already in list';
+                $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                if (empty($ext)) {
+                    $error = 'File must have an extension';
+                } elseif (!in_array($ext, $allowedExts)) {
+                    $error = 'File type .' . htmlspecialchars($ext) . ' not allowed';
                 } else {
-                    $fileList[] = $entry;
-                    $content = implode("\n", $fileList) . "\n";
-                    if (file_put_contents($editorFile, $content, LOCK_EX) !== false) {
-                        $message = 'File added to list';
-                        writeSysLog(1, $authUserid . ' added editable file: ' . $entry);
+                    $entry = $dir . '/' . $file;
+                    $fileList = [];
+                    if (file_exists($editorFile)) {
+                        $lines = file($editorFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                        foreach ($lines as $line) {
+                            $line = trim($line);
+                            if (!empty($line)) $fileList[] = $line;
+                        }
+                    }
+                    if (in_array($entry, $fileList)) {
+                        $error = 'File already in list';
                     } else {
-                        $error = 'Save failed';
+                        $targetDir = realpath(__DIR__ . '/../' . $dir);
+                        $targetPath = $targetDir . '/' . basename($file);
+                        if (!file_exists($targetPath)) {
+                            file_put_contents($targetPath, '', LOCK_EX);
+                        }
+                        $fileList[] = $entry;
+                        $content = implode("\n", $fileList) . "\n";
+                        if (file_put_contents($editorFile, $content, LOCK_EX) !== false) {
+                            $message = 'File added to list';
+                            writeSysLog(1, $authUserid . ' added editable file: ' . $entry);
+                        } else {
+                            $error = 'Save failed';
+                        }
                     }
                 }
             }
@@ -1493,6 +1515,47 @@ include '../tpl/adm_head.log';
         <?php endif; ?>
     </div>
     <?php endif; ?>
+
+    <!-- Card 3: Common SQL Examples -->
+    <div class="card">
+        <div class="card-title">Common SQL Examples</div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:100px;">Type</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td data-label="Type"><code>SELECT =</code></td>
+                        <td data-label="Example"><code>SELECT * FROM table_name WHERE field = 'value'</code></td>
+                    </tr>
+                    <tr>
+                        <td data-label="Type"><code>SELECT LIKE</code></td>
+                        <td data-label="Example"><code>SELECT * FROM table_name WHERE field LIKE '%value%'</code></td>
+                    </tr>
+                    <tr>
+                        <td data-label="Type"><code>SELECT ORDER BY</code></td>
+                        <td data-label="Example"><code>SELECT * FROM table_name WHERE field = 'value' ORDER BY id DESC LIMIT 10</code></td>
+                    </tr>
+                    <tr>
+                        <td data-label="Type"><code>INSERT</code></td>
+                        <td data-label="Example"><code>INSERT INTO table_name (field1, field2, field3) VALUES ('value1', 'value2', 'value3')</code></td>
+                    </tr>
+                    <tr>
+                        <td data-label="Type"><code>UPDATE</code></td>
+                        <td data-label="Example"><code>UPDATE table_name SET field1 = 'new_value' WHERE id = 1</code></td>
+                    </tr>
+                    <tr>
+                        <td data-label="Type"><code>DELETE</code></td>
+                        <td data-label="Example"><code>DELETE FROM table_name WHERE id = 1</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
     <?php break;
 
