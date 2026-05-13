@@ -517,6 +517,140 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // ---- Add admin page ----
+    if ($postType === 'addpage') {
+        $pageName = preg_replace('/[^a-zA-Z0-9]/', '', trim($_POST['page_name'] ?? ''));
+        $menuText = trim($_POST['menu_text'] ?? '');
+        $addMenu = isset($_POST['add_menu']);
+
+        if (empty($pageName)) {
+            $error = 'Filename cannot be empty';
+        } elseif (empty($menuText)) {
+            $error = 'Menu text cannot be empty';
+        } elseif (file_exists(__DIR__ . '/add_' . $pageName . '.php')) {
+            $error = 'File adm/add_' . $pageName . '.php already exists';
+        } else {
+            $phpContent = "<?php\n"
+                . "\$pageLevel = 20;\n"
+                . "require_once '../inc/auth.php';\n"
+                . "\$routerLogFile = __DIR__ . '/../data/add_" . $pageName . ".log';\n"
+                . "include \$routerLogFile;\n";
+            file_put_contents(__DIR__ . '/add_' . $pageName . '.php', $phpContent, LOCK_EX);
+
+            $logContent = "<?php\n"
+                . "\$pageTitle = " . var_export($menuText, true) . ";\n"
+                . "// ====== Rect liu code area ======\n\n\n\n"
+                . "// ====== Rect liu code area ======\n"
+                . "include '../tpl/adm_head.log';\n"
+                . "?>\n"
+                . "<main>\n"
+                . "    <div class=\"card\">\n"
+                . "        <div class=\"card-title\"><?php echo \$pageTitle; ?></div>\n"
+                . "        <!-- ====== Rect liu code area ====== -->\n\n\n\n"
+                . "        <!-- ====== Rect liu code area ====== -->\n"
+                . "    </div>\n"
+                . "</main>\n"
+                . "<?php include '../tpl/adm_foot.log'; ?>\n";
+            file_put_contents(__DIR__ . '/../data/add_' . $pageName . '.log', $logContent, LOCK_EX);
+
+            $editorFile = __DIR__ . '/../data/editor_files.log';
+            $fileList = [];
+            if (file_exists($editorFile)) {
+                $lines = file($editorFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (!empty($line)) $fileList[] = $line;
+                }
+            }
+            $fileList[] = 'data/add_' . $pageName . '.log';
+            file_put_contents($editorFile, implode("\n", $fileList) . "\n", LOCK_EX);
+
+            if ($addMenu) {
+                $menuFile = __DIR__ . '/inc_menu.log';
+                $menuLines = [];
+                if (file_exists($menuFile)) {
+                    $menuLines = file($menuFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                }
+                $menuLines[] = '20|' . $menuText . '|add_' . $pageName . '.php';
+                file_put_contents($menuFile, implode("\n", $menuLines) . "\n", LOCK_EX);
+            }
+
+            writeSysLog(1, $authUserid . ' created page: add_' . $pageName);
+
+            header('Location: sys.php?type=editor&edit=data%2Fadd_' . $pageName . '.log');
+            exit;
+        }
+    }
+
+    // ---- SQL Management ----
+    if ($postType === 'sql') {
+        require_once __DIR__ . '/../inc/sys_sql_func.php';
+        $sqlAction = $_POST['sql_action'] ?? '';
+
+        // Save database config
+        if ($sqlAction === 'save_config') {
+            $dbHost = trim($_POST['db_host'] ?? '');
+            $dbName = trim($_POST['db_name'] ?? '');
+            $dbUser = trim($_POST['db_user'] ?? '');
+            $dbPass = $_POST['db_pass'] ?? '';
+
+            if (empty($dbHost) || empty($dbName) || empty($dbUser)) {
+                $error = 'Please fill in database host, name and username';
+            } else {
+                $oldConfig = getSqlConfig();
+                if (empty($dbPass)) {
+                    $dbPass = $oldConfig['db_pass'];
+                }
+                if (writeSqlConfig($dbName, $dbHost, $dbUser, $dbPass)) {
+                    $test = testDbConnection(['db_name' => $dbName, 'db_host' => $dbHost, 'db_user' => $dbUser, 'db_pass' => $dbPass, 'db_charset' => 'utf8mb4']);
+                    if ($test['success']) {
+                        $message = 'Database config saved and connection successful';
+                        writeSysLog(1, $authUserid . ' updated database config');
+                    } else {
+                        $message = 'Config saved but connection failed: ' . $test['message'];
+                        writeSysLog(1, $authUserid . ' updated database config (connection test failed)');
+                    }
+                } else {
+                    $error = 'Failed to write database config file';
+                }
+            }
+        }
+
+        // Execute SQL
+        if ($sqlAction === 'execute_sql') {
+            $sql = trim($_POST['sql_input'] ?? '');
+            if (empty($sql)) {
+                $error = 'Please enter SQL statement';
+            } else {
+                $conn = getDbConnectionFromConfig();
+                if (!$conn['success'] || !$conn['pdo']) {
+                    $error = 'Database not connected: ' . $conn['message'];
+                } else {
+                    $stmtType = getStatementType($sql);
+                    $tables = extractTableName($sql);
+
+                    // Check permission
+                    $permCheck = checkTablePermission($stmtType, $tables);
+                    if (!$permCheck['allow']) {
+                        $error = 'Permission denied: ' . $permCheck['reason'];
+                    } else {
+                        $result = executeSqlStatement($conn['pdo'], $sql);
+
+                        // If CREATE TABLE succeeded, add table to protected list
+                        if ($result['success'] && strtoupper($stmtType) === 'CREATE' && !empty($tables)) {
+                            addProtectedTable($tables[0], 8);
+                            $result['message'] .= '; Table "' . $tables[0] . '" auto-added to protected list (level 8)';
+                        }
+
+                        // Store result for display
+                        $_SESSION['sql_result'] = $result;
+                        writeSysLog(1, $authUserid . ' executed SQL: ' . $stmtType . (!empty($tables) ? ' on ' . implode(',', $tables) : ''));
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 // =====================================================================
@@ -536,7 +670,9 @@ include '../tpl/adm_head.log';
         <a href="sys.php?type=editor" class="tab <?php echo $type === 'editor' ? 'active' : ''; ?>">File Editor</a>
         <a href="sys.php?type=pics" class="tab <?php echo $type === 'pics' ? 'active' : ''; ?>">Pics</a>
         <a href="sys.php?type=menu" class="tab <?php echo $type === 'menu' ? 'active' : ''; ?>">Menu</a>
+        <a href="sys.php?type=addpage" class="tab <?php echo $type === 'addpage' ? 'active' : ''; ?>">Add Page</a>
         <a href="sys.php?type=log" class="tab <?php echo $type === 'log' ? 'active' : ''; ?>">System Log</a>
+        <a href="sys.php?type=sql" class="tab <?php echo $type === 'sql' ? 'active' : ''; ?>">SQL</a>
     </div>
 </div>
 
@@ -1141,6 +1277,169 @@ include '../tpl/adm_head.log';
         </table>
         <?php endif; ?>
     </div>
+    <?php break;
+
+    case 'addpage': ?>
+    <!-- Add Admin Page -->
+    <div class="card">
+        <div class="card-title">Add Admin Page</div>
+        <form method="post">
+            <input type="hidden" name="sys_type" value="addpage">
+            <div class="form-group">
+                <label for="page_name">Filename (字母数字)</label>
+                <input type="text" id="page_name" name="page_name" placeholder="e.g. custompage" pattern="[a-zA-Z0-9]+" required style="width:100%;">
+                <p class="text-muted mt-1" style="font-size:0.8rem;">→ 生成 <code>adm/add_[name].php</code> + <code>data/add_[name].log</code></p>
+            </div>
+            <div class="form-group">
+                <label for="menu_text">栏目名称 (必填)</label>
+                <input type="text" id="menu_text" name="menu_text" placeholder="e.g. Custom Page" required style="width:100%;">
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="add_menu" value="1">
+                    Add to Menu (Level 20)
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm create page?')">Create Page</button>
+        </form>
+    </div>
+    <?php break;
+
+    // ================================================================
+    case 'sql': ?>
+    <!-- SQL Management -->
+    <?php
+        require_once __DIR__ . '/../inc/sys_sql_func.php';
+        $sqlConfig = getSqlConfig();
+        $dbConfigured = !empty($sqlConfig['db_name']) && !empty($sqlConfig['db_host']) && !empty($sqlConfig['db_user']);
+
+        // Test connection status
+        $dbConnected = false;
+        $dbConnMessage = '';
+        $dbPdo = null;
+        if ($dbConfigured) {
+            $connTest = testDbConnection($sqlConfig);
+            $dbConnected = $connTest['success'];
+            $dbConnMessage = $connTest['message'];
+            $dbPdo = $connTest['pdo'];
+        }
+
+        // Get SQL result from session
+        $sqlResult = null;
+        if (isset($_SESSION['sql_result'])) {
+            $sqlResult = $_SESSION['sql_result'];
+            unset($_SESSION['sql_result']);
+        }
+
+        $protectedTables = getProtectedTables();
+    ?>
+
+    <!-- Card 1: Database Configuration -->
+    <div class="card">
+        <div class="card-title">Database Configuration</div>
+
+        <!-- Status -->
+        <div class="mb-2" style="padding:10px 14px;border-radius:var(--radius);font-size:0.9rem;<?php echo !$dbConfigured ? 'background:#fff3cd;border:1px solid #ffeeba;color:#856404;' : ($dbConnected ? 'background:#d4edda;border:1px solid #c3e6cb;color:#155724;' : 'background:#f8d7da;border:1px solid #f5c6cb;color:#721c24;'); ?>">
+            <?php if (!$dbConfigured): ?>
+            <strong>&#9888; Database not configured</strong> &mdash; Fill in the form below and save to set up.
+            <?php elseif ($dbConnected): ?>
+            <strong>&#10004; Database connected</strong> &mdash; <?php echo htmlspecialchars($dbConnMessage); ?>
+            <?php else: ?>
+            <strong>&#10008; Connection failed</strong> &mdash; <?php echo htmlspecialchars($dbConnMessage); ?>
+            <?php endif; ?>
+        </div>
+
+        <form method="post" onsubmit="return confirm('&#9888; Modifying database config will affect website operation. Continue?')">
+            <input type="hidden" name="sys_type" value="sql">
+            <input type="hidden" name="sql_action" value="save_config">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="form-group">
+                    <label for="db_host">Host</label>
+                    <input type="text" id="db_host" name="db_host" value="<?php echo htmlspecialchars($sqlConfig['db_host'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="db_name">Database Name</label>
+                    <input type="text" id="db_name" name="db_name" value="<?php echo htmlspecialchars($sqlConfig['db_name'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="db_user">Username</label>
+                    <input type="text" id="db_user" name="db_user" value="<?php echo htmlspecialchars($sqlConfig['db_user'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="db_pass">Password</label>
+                    <input type="password" id="db_pass" name="db_pass" placeholder="<?php echo !empty($sqlConfig['db_pass']) ? 'Leave blank to keep current' : 'Enter password'; ?>" autocomplete="off">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-2">Save Config</button>
+        </form>
+    </div>
+
+    <!-- Card 2: SQL Executor (only when connected) -->
+    <?php if ($dbConnected && $dbPdo): ?>
+    <div class="card">
+        <div class="card-title">SQL Executor</div>
+
+        <p class="text-muted mb-2" style="font-size:0.8rem;color:#856404;background:#fff3cd;padding:10px 14px;border-radius:var(--radius);border:1px solid #ffeeba;">
+            <strong>&#9888; Protected tables:</strong>
+            <?php if (empty($protectedTables)): ?>
+            None defined
+            <?php else: ?>
+            <?php foreach ($protectedTables as $tbl => $lv): ?>
+            <code><?php echo htmlspecialchars($tbl); ?>(<?php echo intval($lv); ?>)</code>
+            <?php endforeach; ?>
+            <?php endif; ?>
+            <br>
+            Tables not in the protected list cannot be operated on. CREATE TABLE is always allowed and auto-adds the new table (level 8).
+        </p>
+
+        <form method="post">
+            <input type="hidden" name="sys_type" value="sql">
+            <input type="hidden" name="sql_action" value="execute_sql">
+            <div class="form-group">
+                <textarea name="sql_input" rows="12" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--radius);font-family:Consolas,'Courier New',monospace;font-size:0.875rem;line-height:1.6;tab-size:4;" placeholder="Enter SQL statement (single statement)&#10;&#10;Example:&#10;  SELECT * FROM post_info LIMIT 10&#10;  CREATE TABLE test (id INT)&#10;  SHOW TABLES"><?php echo isset($_POST['sql_input']) ? htmlspecialchars($_POST['sql_input'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm execute SQL? This action cannot be undone.')">Execute</button>
+        </form>
+
+        <?php if ($sqlResult): ?>
+        <div class="mt-2">
+            <div class="card-title">Execution Result</div>
+            <?php if ($sqlResult['success']): ?>
+            <div class="alert alert-success" style="padding:10px 14px;border-radius:var(--radius);font-size:0.9rem;">
+                <strong>&#10004; Success</strong> &mdash; <?php echo htmlspecialchars($sqlResult['message']); ?>
+            </div>
+            <?php if (!empty($sqlResult['data'])): ?>
+            <div style="overflow-x:auto;margin-top:8px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <?php foreach ($sqlResult['columns'] as $col): ?>
+                            <th><?php echo htmlspecialchars($col, ENT_QUOTES, 'UTF-8'); ?></th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($sqlResult['data'] as $row): ?>
+                        <tr>
+                            <?php foreach ($sqlResult['columns'] as $col): ?>
+                            <td data-label="<?php echo htmlspecialchars($col, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($row[$col] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+                            <?php endforeach; ?>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+            <?php else: ?>
+            <div class="alert alert-error" style="padding:10px 14px;border-radius:var(--radius);font-size:0.9rem;">
+                <strong>&#10008; Error</strong> &mdash; <?php echo htmlspecialchars($sqlResult['error']); ?>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
     <?php break;
 
 endswitch; ?>
