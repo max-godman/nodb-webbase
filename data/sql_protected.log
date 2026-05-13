@@ -1,0 +1,13 @@
+# Protected table permission list
+# Format: level|tablename
+# 10=Full control(inc. drop), 9=Alter fields, 8=CRUD rows, 5=Read only
+# Tables not in this list: cannot be operated on
+# New tables from SQL executor auto-added with level 8
+10|post_log
+10|post_info
+10|post_pic
+10|post_tag
+10|post_blkip
+10|post_spam
+10|post_city
+10|post_country
