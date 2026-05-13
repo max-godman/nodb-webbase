@@ -1,5 +1,75 @@
 # Changelog
 
+## [1.0.0] - 2026-05-13
+
+### New: SQL Management — Database config + SQL executor + protected table whitelist
+
+**Core changes:**
+- New `type=sql` tab in `adm/sys.php` — two-section layout: Database Config + SQL Executor
+- Database Config: read/write `inc/sys_sql.php`, test connection, status display (not configured/connected/failed)
+- SQL Executor: single-statement execution with PDO, SELECT rendered as HTML table
+- Protected table whitelist (`data/sql_protected.log`): level-based permission (10=full/9=alter fields/8=CRUD rows/5=read only)
+- CREATE TABLE always allowed, auto-adds new table to whitelist with level 8
+- Tables not in whitelist: cannot be operated on
+- No-table SQL (SELECT 1, SHOW TABLES): directly allowed
+- SQL helper library `inc/sys_sql_func.php` — 10 functions for config, permission, execution
+- Auto-registered `data/sql_protected.log` in File Editor for manual editing
+
+**New files:**
+- `inc/sys_sql_func.php` — SQL helper function library
+- `data/sql_protected.log` — Protected table permission whitelist
+
+**Modified files:**
+- `adm/sys.php` — New tab link, POST handler (save_config + execute_sql), case 'sql' page output
+- `data/editor_files.log` — Registered sql_protected.log for File Editor
+
+### 新增：SQL管理 — 数据库配置 + SQL执行器 + 受保护表白名单
+
+**核心变化：**
+- `adm/sys.php` 新增 `type=sql` 标签页 — 分两段布局：数据库配置 + SQL 执行器
+- 数据库配置：读写 `inc/sys_sql.php`，测试连接，状态展示（未配置/已连接/连接失败）
+- SQL 执行器：单条语句执行，SELECT 结果渲染为 HTML 表格
+- 受保护表白名单（`data/sql_protected.log`）：分级权限（10=完全/9=改字段/8=改数据/5=仅查询）
+- CREATE TABLE 始终放行，执行后自动加入白名单（级别 8）
+- 不在白名单的表：禁止操作
+- 不涉及表的 SQL（SELECT 1, SHOW TABLES）：直接放行
+- SQL 函数库 `inc/sys_sql_func.php` — 10 个函数覆盖配置、权限、执行全流程
+- `data/sql_protected.log` 自动注册到 File Editor，支持手动编辑
+
+**新增文件：**
+- `inc/sys_sql_func.php` — SQL 辅助函数库
+- `data/sql_protected.log` — 受保护表权限白名单
+
+**修改文件：**
+- `adm/sys.php` — 新 Tab、POST handler、case 'sql' 页面输出
+- `data/editor_files.log` — 注册 sql_protected.log 到 File Editor
+
+## [0.10.0] - 2026-05-13
+
+### New: Add Admin Page — Auto-generate backend pages
+
+**Core changes:**
+- New `type=addpage` tab in `adm/sys.php` — Creates admin files from a form
+- Generates `adm/add_{name}.php` (controller with auth) + `data/add_{name}.log` (content template)
+- Auto-registers `.log` in File Editor editable list
+- Optional auto-add menu entry (Level 20) to `adm/inc_menu.log`
+- On success: redirects to File Editor for immediate `.log` editing
+
+**Modified files:**
+- `adm/sys.php` — New tab link, POST handler, form UI
+
+### 新增：添加后台文件 — 自动生成后台页面
+
+**核心变化：**
+- `adm/sys.php` 新增 `type=addpage` 标签页 — 表单创建后台管理文件
+- 生成 `adm/add_{name}.php`（含 auth 的控制器）+ `data/add_{name}.log`（内容模板）
+- 自动将 `.log` 注册到 File Editor 可编辑列表
+- 可选自动添加菜单项（级别 20）到 `adm/inc_menu.log`
+- 创建成功跳转到 File Editor 立即编辑 `.log`
+
+**修改文件：**
+- `adm/sys.php` — 新 Tab、POST handler、表单界面
+
 ## [0.9.0] - 2026-05-12
 
 ### Major: Routing & Page Management Rewrite

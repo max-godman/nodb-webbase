@@ -11,20 +11,18 @@ A minimalist **PHP backend management system** for developers and small teams, f
 
 ## Features
 
-- **Pure PHP** — PHP 7.0+, zero dependencies, zero frameworks
-- **Hybrid Storage** — Admin configs via files, business data via MySQL (PDO)
-- **Single-User Login** — Dynamic token authentication per-minute
-- **Multi-Account** — Multiple admin accounts with role-based permission levels
-- **4 Universal Page Types** — `page` (static), `code` (PHP logic), `code_paged` (paginated code), `api` (JSON endpoint)
-- **Auto-Compiled URL Patterns** — Enter `/tag/{abc}` — system generates regex automatically
-- **Code Block Isolation** — PHP code stored as standalone `tpl/code_{key}.log` files, edited via File Editor
-- **`{code:xxx}` Placeholder System** — Code block variables auto-exposed for Content editor
-- **Route Status Management** — 3 states: Active(2) / Paused(1) / Delete(0)
-- **Single Save Button** — Save and compile in one step
-- **Two-Part Templates** — `head + foot` template split for both admin and front-end
-- **File Editor** — Edit PHP/config files directly from admin panel
-- **Image Upload** — Supports jpg, jpeg, png, gif, webp, bmp, svg, ico
-- **Placeholder System** — `{sys_xxx}` for site config, `{txt_xxx}` for UI text, `{site:links}` for friend links
+- **Quick setup** — One form to get started in seconds. Database optional, configure later from admin panel.
+- **Static pages go live fast** — Create pure HTML pages with title/description/content via admin. Placeholder system (`{sys_site_name}`, `{txt_home}`, etc.) binds live config & UI text to static pages — zero code needed.
+- **Admin file creation** — `Add Page` tab auto-generates `adm/add_*.php` with auth + editable `.log` template. New admin columns added in seconds.
+- **Frontend PHP pages via routing** — Map URL patterns (`/tag/{abc}`, `/article/{fn}.html`) to code block files (`tpl/code_*.log`). Dynamic frontend pages without touching core.
+- **MySQL management** — Settings → SQL tab: configure database, test connection, execute SQL, manage protected table whitelist with level-based permissions. All inside admin panel.
+- **4 universal page types** — `page` (static), `code` (PHP logic), `code_paged` (paginated), `api` (JSON endpoint)
+- **Auto-compiled URL patterns** — Enter `/tag/{abc}`, system generates regex automatically
+- **Code block isolation** — PHP logic stored as standalone `tpl/code_*.log` files, edited via File Editor
+- **File Editor** — Edit PHP/config/template files directly from admin panel
+- **Multi-account** — Role-based permission levels (20 Super → 10 Observer)
+- **Hybrid storage** — Admin configs via files, business data via MySQL (PDO)
+- **Image upload** — Supports jpg, jpeg, png, gif, webp, bmp, svg, ico
 
 ---
 
@@ -43,6 +41,7 @@ NoDB-WebBase/
 │   ├── site_router.php     # Front-end route table (auto-compiled)
 │   ├── site_pages.php      # Unified page config (4 types)
 │   ├── site_functions.php  # Front-end functions (routing, placeholders)
+│   ├── sys_sql_func.php    # SQL helper library (config, permissions, execution)
 │   ├── auth.php            # Auth middleware
 │   ├── inc_sha.php         # SHA256 utility
 │   └── link.log            # Friend links data
@@ -62,6 +61,7 @@ NoDB-WebBase/
 │   ├── inc_level.log       # Permission level definitions
 │   ├── site_router.log     # Route drafts
 │   ├── site_nav.log        # Front-end navigation
+│   ├── sql_protected.log   # Protected table permission whitelist
 │   └── sys_log.log         # System logs
 ├── pics/                   # Images & styles
 │   ├── adm_css.css         # Admin styles
@@ -86,7 +86,7 @@ NoDB-WebBase/
 
 Place the project in your web root directory (e.g., `/var/www/html/NoDB-WebBase`).
 
-### 2. Web Server Configuration
+### 2. Web Server Configuration (Pretty URL / Rewrite Rules)
 
 **Nginx:**
 ```nginx
@@ -122,7 +122,7 @@ Visit `http://your-domain/setup.php` to start the setup wizard:
 1. Choose the website language
 2. Set the bound domain name (do NOT include `http://` or `www`)
 3. Create the first admin account — password auto-generated as `username + 6-digit date` (e.g. `admin260512`)
-4. Configure database (optional — only if `data/sql.log` exists with table creation scripts)
+4. Database can be configured later via admin panel **Settings → SQL**
 
 ### 4. Login
 
@@ -141,6 +141,9 @@ Login → **Pages** tab → set route status to Active(2) → click Save. The fr
 | **Pages** | `adm/router.php` | Define URLs, add/activate/pause/delete pages. Only entry point for new pages. |
 | **Content** | `adm/pages.php` | Edit page title, description, and content. Code blocks shown read-only. |
 | **Menu** | `adm/nav.php` | Manage front-end navigation menu items. |
+| **System Settings** | `adm/sys.php` | Multi-tab: System Info, Config (domain), Accounts, Params, UI Text, File Editor, Pics, Menu, Add Page, System Log, SQL |
+| **Links** | `adm/links.php` | Batch edit and quick add friend links |
+| **Password** | `adm/pwd.php` | Change login password (all admins) |
 
 ### Page Types
 
@@ -151,7 +154,32 @@ Login → **Pages** tab → set route status to Active(2) → click Save. The fr
 | `code_paged` | Yes | Yes | Full HTML | Paginated pages with page number in URL |
 | `api` | Yes | No | None | JSON/plain text response |
 
-### URL Pattern Auto-Compilation
+### SQL Management
+
+The **SQL** tab in System Settings (`sys.php?type=sql`) provides:
+
+- **Database Configuration** — Set MySQL host/name/user/password, test connection, status display
+- **SQL Executor** — Run single SQL statements; SELECT results rendered as HTML table
+- **Protected Table Whitelist** — `data/sql_protected.log` stores table-level permissions:
+
+| Level | Permission |
+|-------|-----------|
+| 10 | Full access (schema + data) |
+| 9 | Alter fields only |
+| 8 | CRUD row data |
+| 5 | Read only |
+
+CREATE TABLE is always allowed and auto-adds the new table to the whitelist at level 8.
+
+### Add Admin Page
+
+The **Add Page** tab (`sys.php?type=addpage`) auto-generates backend pages from a form:
+
+- Creates `adm/add_{name}.php` (controller with auth middleware) + `data/add_{name}.log` (content template)
+- Automatically registers the `.log` file in File Editor for immediate editing
+- Optional auto-add menu entry (Level 20) to admin menu
+
+---
 
 | Input | Compiled Match | Vars |
 |-------|---------------|------|
@@ -239,20 +267,18 @@ Active route fields are read-only — set to Paused first to edit.
 
 ## 功能特性
 
-- **纯原生 PHP** — PHP 7.0+，零依赖、零框架
-- **混合存储** — 管理员配置用文件存储，业务数据用 MySQL（PDO）
-- **单用户登录** — 每分钟动态令牌认证
-- **多账号管理** — 支持多管理员，基于角色权限
+- **安装更便捷** — 一张表单秒级完成安装。数据库可选，后续在后台配置。
+- **纯静态网页快速上线** — 后台管理 title/desc/content，占位符系统（`{sys_site_name}`、`{txt_home}` 等）绑定系统配置和界面文字到静态页，零代码。
+- **后台在线建文件** — `Add Page` 标签页自动生成 `adm/add_*.php`（含认证）+ 可编辑 `.log` 模板。添加后台栏目轻松搞定。
+- **路由添加前台PHP页面** — 在 Router 标签页配置 URL Pattern（如 `/tag/{abc}`）→ 系统自动编译正则 → 关联 `tpl/code_*.log` 代码块文件。前台功能页面与栏目无需修改核心代码。
+- **后台管理 MySQL** — Settings → SQL 标签页：数据库配置、连接测试、SQL 执行、受保护表权限白名单，全在后台完成。
 - **4 种通用页面类型** — `page`（静态）、`code`（PHP逻辑）、`code_paged`（带分页）、`api`（JSON接口）
 - **URL Pattern 自动编译** — 输入 `/tag/{abc}`，系统自动生成正则 + 变量名
-- **代码块独立文件** — PHP 代码存为 `tpl/code_{key}.log`，通过 File Editor 编辑
-- **`{code:xxx}` 占位符** — 代码块变量自动暴露给内容编辑器引用
-- **路由状态管理** — 3 档：启用(2) / 暂停(1) / 删除(0)
-- **单按钮保存** — 保存 + 编译一步完成
-- **两段式模板** — 后台和前端均采用 head + foot 模板分离
-- **文件编辑器** — 后台直接编辑 PHP/配置文件
+- **代码块独立存储** — PHP 逻辑存为 `tpl/code_*.log`，通过 File Editor 编辑
+- **文件编辑器** — 后台直接编辑 PHP/配置/模板文件
+- **多账号管理** — 基于角色权限（20 超级管理员 → 10 观察员）
+- **混合存储** — 管理员配置用文件，业务数据用 MySQL（PDO）
 - **图片上传** — 支持 jpg/jpeg/png/gif/webp/bmp/svg/ico
-- **占位符系统** — `{sys_xxx}` 系统参数、`{txt_xxx}` 界面文字、`{code:xxx}` 代码块变量、`{site:links}` 友情链接
 
 ---
 
@@ -271,6 +297,7 @@ NoDB-WebBase/
 │   ├── site_router.php     # 前端路由表（自动编译）
 │   ├── site_pages.php      # 统一页面配置（4种类型）
 │   ├── site_functions.php  # 前端共用函数库
+│   ├── sys_sql_func.php    # SQL 辅助函数库（配置、权限、执行）
 │   ├── auth.php            # 认证中间件
 │   ├── inc_sha.php         # SHA256 加密函数
 │   └── link.log            # 友情链接数据
@@ -290,6 +317,7 @@ NoDB-WebBase/
 │   ├── inc_level.log       # 级别选项
 │   ├── site_router.log     # 路由草稿
 │   ├── site_nav.log        # 前端导航数据
+│   ├── sql_protected.log   # 受保护表权限白名单
 │   └── sys_log.log         # 系统日志
 ├── pics/                   # 图片与样式
 │   ├── adm_css.css         # 后台样式
@@ -314,7 +342,7 @@ NoDB-WebBase/
 
 将项目放入 Web 根目录。
 
-### 2. Web 服务器配置
+### 2. Web 服务器配置（伪静态规则 / Rewrite Rules）
 
 **Nginx：**
 ```nginx
@@ -341,7 +369,7 @@ RewriteRule \.log$ - [F,NC]
 1. 选择网站语言
 2. 设置绑定域名（不要加 `http://` 或 `www`）
 3. 创建管理员账号 — 密码自动生成为 `用户名 + 6位日期`（如 `admin260512`）
-4. 配置数据库（可选，仅当有 `data/sql.log` 时显示）
+4. 数据库可在后台 **Settings → SQL** 中后续配置
 
 ### 4. 登录后台
 
@@ -358,8 +386,11 @@ RewriteRule \.log$ - [F,NC]
 | 标签 | 文件 | 功能 |
 |------|------|------|
 | **Pages** | `adm/router.php` | 定义 URL、新增/启用/暂停/删除页面 |
-| **Content** | `adm/pages.php` | 编辑页面 title/desc/content |
+| **Content** | `adm/pages.php` | 编辑页面 title/desc/content，自动生成 sitemap.xml |
 | **Menu** | `adm/nav.php` | 管理前端导航菜单 |
+| **System Settings** | `adm/sys.php` | 多标签：系统信息、配置（域名）、账号、参数、界面文字、文件编辑器、图片、菜单、添加后台文件、系统日志、SQL |
+| **Links** | `adm/links.php` | 友情链接批量编辑+快速添加 |
+| **Password** | `adm/pwd.php` | 修改登录密码（所有管理员） |
 
 ### 4 种页面类型
 
@@ -370,7 +401,32 @@ RewriteRule \.log$ - [F,NC]
 | `code_paged` | ✅ | ✅ | ✅ | ✅ | 带分页 |
 | `api` | ✅ | ❌ | ❌ | ❌ | JSON 接口 |
 
-### URL Pattern 自动编译
+### SQL管理
+
+**SQL** 标签页（`sys.php?type=sql`）提供：
+
+- **数据库配置** — 设置 MySQL 主机/库名/用户/密码，测试连接，状态展示
+- **SQL执行器** — 执行单条 SQL 语句，SELECT 结果渲染为 HTML 表格
+- **受保护表白名单** — `data/sql_protected.log` 存储表级权限：
+
+| 级别 | 权限 |
+|------|------|
+| 10 | 完全访问（结构+数据） |
+| 9 | 仅改字段 |
+| 8 | 增删改数据 |
+| 5 | 仅查询 |
+
+CREATE TABLE 始终放行，执行后自动加入白名单（级别 8）。
+
+### 添加后台文件
+
+**Add Page** 标签页（`sys.php?type=addpage`）表单自动生成后台页面：
+
+- 创建 `adm/add_{name}.php`（含 auth 的控制器）+ `data/add_{name}.log`（内容模板）
+- 自动将 `.log` 注册到 File Editor 可编辑列表
+- 可选自动添加菜单项（Level 20）
+
+---
 
 | 输入 | 自动编译 | 变量 |
 |------|---------|------|

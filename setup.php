@@ -48,13 +48,7 @@ if (isSystemInitialized()) {
 }
 
 // ========================================
-// 3. Check if database config needed
-// ========================================
-$sqlLogFile = __DIR__ . '/data/sql.log';
-$needDatabase = file_exists($sqlLogFile);
-
-// ========================================
-// 4. Process form submission
+// 3. Process form submission
 // ========================================
 $error = '';
 
@@ -68,12 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $siteName = 'NoDB-WebBase';
     $siteWebUrl = 'https://www.google.com/';
     
-    // Database config (optional)
-    $dbName = isset($_POST['db_name']) ? trim($_POST['db_name']) : '';
-    $dbHost = isset($_POST['db_host']) ? trim($_POST['db_host']) : '';
-    $dbUser = isset($_POST['db_user']) ? trim($_POST['db_user']) : '';
-    $dbPass = isset($_POST['db_pass']) ? trim($_POST['db_pass']) : '';
-    
     // Validate required fields
     if (empty($siteLanguage)) {
         $error = 'Please select site language';
@@ -85,8 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Username can only contain letters, numbers and underscores';
     } elseif (strlen($userid) < 3 || strlen($userid) > 20) {
         $error = 'Username length must be 3-20 characters';
-    } elseif ($needDatabase && (empty($dbName) || empty($dbHost) || empty($dbUser))) {
-        $error = 'Please fill in complete database information';
     } else {
         // Generate account data
         $tdayShort = getTdayShort();  // 6-digit yymmdd
@@ -116,39 +102,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'Failed to create user config file';
                 @unlink($mainConfigFile);
             } else {
-                $dbResult = processDatabaseConfig($needDatabase, $dbName, $dbHost, $dbUser, $dbPass, $sqlLogFile);
-                
-                if ($dbResult['success']) {
-                    // Create system config file
-                    $sysConfigResult = createSystemConfig($siteLanguage, $siteName, $siteWebUrl);
-                    if (!$sysConfigResult['success']) {
-                        $error = $sysConfigResult['error'];
-                        @unlink($mainConfigFile);
-                        @unlink($userConfigFile);
-                        if (isset($dbResult['files'])) {
-                            foreach ($dbResult['files'] as $file) {
-                                @unlink($file);
-                            }
-                        }
-                    } else {
-                        // All success
-                        $logMsg = "Super admin account {$userid} created successfully";
-                        if (!empty($dbResult['tableCount'])) {
-                            $logMsg .= ". Completed {$dbResult['tableCount']} table(s)";
-                        }
-                        writeSysLog(0, $logMsg);
-                        header('Location: adm/login.php');
-                        exit;
-                    }
-                } else {
-                    $error = $dbResult['error'];
+                $sysConfigResult = createSystemConfig($siteLanguage, $siteName, $siteWebUrl);
+                if (!$sysConfigResult['success']) {
+                    $error = $sysConfigResult['error'];
                     @unlink($mainConfigFile);
                     @unlink($userConfigFile);
-                    if (isset($dbResult['files'])) {
-                        foreach ($dbResult['files'] as $file) {
-                            @unlink($file);
-                        }
-                    }
+                } else {
+                    $logMsg = "Super admin account {$userid} created successfully";
+                    writeSysLog(0, $logMsg);
+                    header('Location: adm/login.php');
+                    exit;
                 }
             }
         }
@@ -206,119 +169,6 @@ function generateUserConfig($userid, $userpwd, $userint, $userlevel) {
 }
 
 /**
- * Process database configuration
- */
-function processDatabaseConfig($needDatabase, $dbName, $dbHost, $dbUser, $dbPass, $sqlLogFile) {
-    $result = array('success' => true, 'error' => '', 'files' => array());
-    
-    if (!$needDatabase) {
-        return $result;
-    }
-    
-    $sqlConfig = generateSqlConfig($dbName, $dbHost, $dbUser, $dbPass);
-    $sqlFile = __DIR__ . '/inc/sys_sql.php';
-    
-    if (file_put_contents($sqlFile, $sqlConfig) === false) {
-        $result['success'] = false;
-        $result['error'] = 'Failed to create database config file';
-        return $result;
-    }
-    $result['files'][] = $sqlFile;
-    
-    $connFile = __DIR__ . '/inc/sys_conn.php';
-    $connContent = generateConnConfig();
-    
-    if (file_put_contents($connFile, $connContent) === false) {
-        $result['success'] = false;
-        $result['error'] = 'Failed to create database connection file';
-        return $result;
-    }
-    $result['files'][] = $connFile;
-    
-    // Test database connection
-    require_once $connFile;
-    $pdo = getDbConnection();
-    
-    if ($pdo === false) {
-        $result['success'] = false;
-        $result['error'] = 'Database connection failed, please check database information';
-        return $result;
-    }
-    
-    require_once $sqlLogFile;
-    $tableResult = createAllTables($pdo);
-    
-    if (!$tableResult['success']) {
-        $result['success'] = false;
-        $result['error'] = 'Table creation failed: ' . $tableResult['error'];
-        return $result;
-    }
-    
-    $verification = verifyTables($pdo);
-    if (!$verification['success']) {
-        $result['success'] = false;
-        $result['error'] = 'Table verification failed: ' . $verification['error'];
-        return $result;
-    }
-    
-    $result['tableCount'] = $tableResult['total'];
-    $result['tableCreated'] = $tableResult['created'];
-    
-    return $result;
-}
-
-/**
- * Generate SQL config content
- */
-function generateSqlConfig($dbName, $dbHost, $dbUser, $dbPass) {
-    $content = "<?php\n";
-    $content .= "/**\n";
-    $content .= " * Database Configuration File\n";
-    $content .= " * Auto-generated at: " . date('Y-m-d H:i:s') . "\n";
-    $content .= " * Warning: Do not manually edit this file\n";
-    $content .= " */\n\n";
-    $content .= "return array(\n";
-    $content .= "    'db_name'    => " . var_export($dbName, true) . ",\n";
-    $content .= "    'db_host'    => " . var_export($dbHost, true) . ",\n";
-    $content .= "    'db_user'    => " . var_export($dbUser, true) . ",\n";
-    $content .= "    'db_pass'    => " . var_export($dbPass, true) . ",\n";
-    $content .= "    'db_charset' => 'utf8mb4',\n";
-    $content .= ");\n";
-    return $content;
-}
-
-/**
- * Generate connection config content
- */
-function generateConnConfig() {
-    $content = "<?php\n";
-    $content .= "/**\n";
-    $content .= " * Database Connection Program\n";
-    $content .= " * Note: This file and sys_sql.php are in the same directory (inc/)\n";
-    $content .= " * @package NoDB-WebBase\n";
-    $content .= " */\n\n";
-    $content .= "/**\n";
-    $content .= " * Get database connection\n";
-    $content .= " * @return PDO|false PDO instance or false on failure\n";
-    $content .= " */\n";
-    $content .= "function getDbConnection() {\n";
-    $content .= "    \$cfg = include __DIR__ . '/sys_sql.php';\n\n";
-    $content .= "    try {\n";
-    $content .= "        \$dsn = \"mysql:host={\$cfg['db_host']};dbname={\$cfg['db_name']};charset={\$cfg['db_charset']}\";\n";
-    $content .= "        \$options = array(\n";
-    $content .= "            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,\n";
-    $content .= "            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,\n";
-    $content .= "            PDO::ATTR_EMULATE_PREPARES => false,\n";
-    $content .= "        );\n";
-    $content .= "        return new PDO(\$dsn, \$cfg['db_user'], \$cfg['db_pass'], \$options);\n";
-    $content .= "    } catch (PDOException \$e) {\n";
-    $content .= "        return false;\n";
-    $content .= "    }\n";
-    $content .= "}\n";
-    return $content;
-}
-
-/**
  * Create system config file
  */
 function createSystemConfig($siteLanguage, $siteName, $siteWebUrl) {
@@ -351,28 +201,6 @@ function createSystemConfig($siteLanguage, $siteName, $siteWebUrl) {
         $result['error'] = 'Failed to create system config file';
     }
     
-    return $result;
-}
-
-/**
- * Verify all tables created successfully
- */
-function verifyTables($pdo) {
-    $tables = array('post_log', 'post_info', 'post_pic', 'post_tag', 'post_blkip', 'post_spam', 'post_city', 'post_country');
-    $result = array('success' => true, 'verified' => 0, 'failed' => array(), 'error' => '');
-    
-    foreach ($tables as $table) {
-        try {
-            $stmt = $pdo->query("SELECT COUNT(id) as cnt FROM {$table}");
-            $result['verified']++;
-        } catch (PDOException $e) {
-            $result['success'] = false;
-            $result['failed'][] = $table;
-            if (empty($result['error'])) {
-                $result['error'] = "Table {$table} verification failed";
-            }
-        }
-    }
     return $result;
 }
 
@@ -566,40 +394,6 @@ $defaultDomain = getRootDomain($defaultDomain);
                     </select>
                 </div>
             </div>
-            <?php if (file_exists(__DIR__ . '/data/sql.log')): ?>
-            <div class="section">
-                <div class="section-title">Database Config</div>
-                <div class="info-box">
-                    <strong>Note:</strong> Place the executable table creation script in <code>data/sql.log</code> to auto-create tables during setup.
-                </div>
-                <?php if ($needDatabase): ?>
-                <div class="form-group">
-                    <label for="db_name">Database Name</label>
-                    <input type="text" id="db_name" name="db_name" 
-                           value="<?php echo isset($_POST['db_name']) ? htmlspecialchars($_POST['db_name']) : ''; ?>" 
-                           required placeholder="e.g. phpone">
-                </div>
-                <div class="form-group">
-                    <label for="db_host">Database Host</label>
-                    <input type="text" id="db_host" name="db_host" 
-                           value="<?php echo isset($_POST['db_host']) ? htmlspecialchars($_POST['db_host']) : 'localhost'; ?>" 
-                           required placeholder="e.g. localhost">
-                </div>
-                <div class="form-group">
-                    <label for="db_user">Database Username</label>
-                    <input type="text" id="db_user" name="db_user" 
-                           value="<?php echo isset($_POST['db_user']) ? htmlspecialchars($_POST['db_user']) : ''; ?>" 
-                           required placeholder="e.g. root">
-                </div>
-                <div class="form-group">
-                    <label for="db_pass">Database Password</label>
-                    <input type="password" id="db_pass" name="db_pass" 
-                           value="<?php echo isset($_POST['db_pass']) ? htmlspecialchars($_POST['db_pass']) : ''; ?>" 
-                           placeholder="Enter database password">
-                </div>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
             <button type="submit" class="submit-btn">Start Setup</button>
         </form>
         <div class="footer">NoDB-WebBase &copy; <?php echo date('Y'); ?></div>
