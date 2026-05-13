@@ -1286,12 +1286,12 @@ include '../tpl/adm_head.log';
         <form method="post">
             <input type="hidden" name="sys_type" value="addpage">
             <div class="form-group">
-                <label for="page_name">Filename (字母数字)</label>
+                <label for="page_name">Filename (alphanumeric only)</label>
                 <input type="text" id="page_name" name="page_name" placeholder="e.g. custompage" pattern="[a-zA-Z0-9]+" required style="width:100%;">
-                <p class="text-muted mt-1" style="font-size:0.8rem;">→ 生成 <code>adm/add_[name].php</code> + <code>data/add_[name].log</code></p>
+                <p class="text-muted mt-1" style="font-size:0.8rem;">→ Creates <code>adm/add_[name].php</code> + <code>data/add_[name].log</code></p>
             </div>
             <div class="form-group">
-                <label for="menu_text">栏目名称 (必填)</label>
+                <label for="menu_text">Page Title (required)</label>
                 <input type="text" id="menu_text" name="menu_text" placeholder="e.g. Custom Page" required style="width:100%;">
             </div>
             <div class="form-group">
