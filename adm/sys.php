@@ -10,6 +10,21 @@ require_once '../inc/auth.php';
 require_once '../inc/inc_sha.php';
 include __DIR__ . '/../data/inc_level.log';
 
+// Load add page menu
+$addMenuItems = [];
+$addMenuFile = __DIR__ . '/../data/add_menu.log';
+if (file_exists($addMenuFile)) {
+    $lines = file($addMenuFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (empty($line)) continue;
+        $parts = explode('|', $line);
+        if (count($parts) >= 2) {
+            $addMenuItems[] = ['text' => trim($parts[0]), 'link' => trim($parts[1])];
+        }
+    }
+}
+
 $type = isset($_GET['type']) ? $_GET['type'] : 'info';
 $message = '';
 $error = '';
@@ -521,7 +536,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($postType === 'addpage') {
         $pageName = preg_replace('/[^a-zA-Z0-9]/', '', trim($_POST['page_name'] ?? ''));
         $menuText = trim($_POST['menu_text'] ?? '');
-        $addMenu = isset($_POST['add_menu']);
 
         if (empty($pageName)) {
             $error = 'Filename cannot be empty';
@@ -532,7 +546,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $phpContent = "<?php\n"
                 . "\$pageLevel = 20;\n"
-                . "require_once '../inc/auth.php';\n"
+                . "require_once '../inc/auth.php';\n\n"
+                . "// Load add page menu\n"
+                . "\$addMenuItems = [];\n"
+                . "\$addMenuFile = __DIR__ . '/../data/add_menu.log';\n"
+                . "if (file_exists(\$addMenuFile)) {\n"
+                . "    \$lines = file(\$addMenuFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);\n"
+                . "    foreach (\$lines as \$line) {\n"
+                . "        \$line = trim(\$line);\n"
+                . "        if (empty(\$line)) continue;\n"
+                . "        \$parts = explode('|', \$line);\n"
+                . "        if (count(\$parts) >= 2) {\n"
+                . "            \$addMenuItems[] = ['text' => trim(\$parts[0]), 'link' => trim(\$parts[1])];\n"
+                . "        }\n"
+                . "    }\n"
+                . "}\n\n"
                 . "\$routerLogFile = __DIR__ . '/../data/add_" . $pageName . ".log';\n"
                 . "include \$routerLogFile;\n";
             file_put_contents(__DIR__ . '/add_' . $pageName . '.php', $phpContent, LOCK_EX);
@@ -543,6 +571,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . "// ====== Rect liu code area ======\n"
                 . "include '../tpl/adm_head.log';\n"
                 . "?>\n"
+                . "<?php if (!empty(\$addMenuItems)): ?>\n"
+                . "<div style=\"display:flex;flex-wrap:wrap;gap:8px 16px;padding:10px 16px;margin-bottom:16px;background:#fff;border-radius:var(--radius);border:1px solid var(--border);\">\n"
+                . "    <?php foreach (\$addMenuItems as \$item): ?>\n"
+                . "    <a href=\"<?php echo htmlspecialchars(\$item['link']); ?>\" style=\"padding:4px 10px;border-radius:var(--radius);background:#f3f4f6;color:var(--text);text-decoration:none;border:1px solid var(--border);font-size:0.9rem;\"><?php echo htmlspecialchars(\$item['text']); ?></a>\n"
+                . "    <?php endforeach; ?>\n"
+                . "</div>\n"
+                . "<?php endif; ?>\n"
                 . "<main>\n"
                 . "    <div class=\"card\">\n"
                 . "        <div class=\"card-title\"><?php echo \$pageTitle; ?></div>\n"
@@ -565,14 +600,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fileList[] = 'data/add_' . $pageName . '.log';
             file_put_contents($editorFile, implode("\n", $fileList) . "\n", LOCK_EX);
 
-            if ($addMenu) {
-                $menuFile = __DIR__ . '/inc_menu.log';
-                $menuLines = [];
-                if (file_exists($menuFile)) {
-                    $menuLines = file($menuFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            // Add to data/add_menu.log
+            $addMenuFile = __DIR__ . '/../data/add_menu.log';
+            $menuAppend = $menuText . '|add_' . $pageName . '.php';
+            if (!file_exists($addMenuFile)) {
+                $menuFirstLines = ['Edit|sys.php?type=editor&edit=data%2Fadd_menu.log', $menuAppend];
+                file_put_contents($addMenuFile, implode("\n", $menuFirstLines) . "\n", LOCK_EX);
+                // Register in editor list
+                $fileList = [];
+                if (file_exists($editorFile)) {
+                    $lines = file($editorFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                    foreach ($lines as $line) {
+                        $line = trim($line);
+                        if (!empty($line)) $fileList[] = $line;
+                    }
                 }
-                $menuLines[] = '20|' . $menuText . '|add_' . $pageName . '.php';
-                file_put_contents($menuFile, implode("\n", $menuLines) . "\n", LOCK_EX);
+                $fileList[] = 'data/add_menu.log';
+                file_put_contents($editorFile, implode("\n", $fileList) . "\n", LOCK_EX);
+            } else {
+                $menuLines = file($addMenuFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                $menuLines[] = $menuAppend;
+                file_put_contents($addMenuFile, implode("\n", $menuLines) . "\n", LOCK_EX);
             }
 
             writeSysLog(1, $authUserid . ' created page: add_' . $pageName);
@@ -681,6 +729,18 @@ include '../tpl/adm_head.log';
 <?php endif; ?>
 <?php if ($error): ?>
 <div class="alert alert-error"><?php echo $error; ?></div>
+<?php endif; ?>
+
+<?php if (!empty($addMenuItems)): ?>
+<div class="card" style="padding:10px 16px;">
+    <div style="display:flex;flex-wrap:wrap;gap:8px 16px;">
+        <?php foreach ($addMenuItems as $item): ?>
+        <a href="<?php echo htmlspecialchars($item['link']); ?>" style="font-size:0.9rem;padding:4px 10px;border-radius:var(--radius);background:#f3f4f6;color:var(--text);text-decoration:none;border:1px solid var(--border);">
+            <?php echo htmlspecialchars($item['text']); ?>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</div>
 <?php endif; ?>
 
 <?php switch ($type):
@@ -1293,12 +1353,6 @@ include '../tpl/adm_head.log';
             <div class="form-group">
                 <label for="menu_text">Page Title (required)</label>
                 <input type="text" id="menu_text" name="menu_text" placeholder="e.g. Custom Page" required style="width:100%;">
-            </div>
-            <div class="form-group">
-                <label>
-                    <input type="checkbox" name="add_menu" value="1">
-                    Add to Menu (Level 20)
-                </label>
             </div>
             <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm create page?')">Create Page</button>
         </form>
