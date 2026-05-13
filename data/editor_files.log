@@ -12,4 +12,5 @@ tpl/code_sub.log
 tpl/adm_msg.log
 data/inc_level.log
 data/sql_protected.log
+data/editor_file_type.log
 robots.txt
