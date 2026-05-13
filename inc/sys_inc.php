@@ -1063,7 +1063,7 @@ function filterSqlInput($input) {
 function writeSysLog($category, $summary, $logFile = '') {
     // Default log path
     if (empty($logFile)) {
-        $logFile = __DIR__ . '/../data/sys_log.log';
+        $logFile = __DIR__ . '/sys_log.log';
     }
 
     // Validate log category
@@ -1136,7 +1136,7 @@ function writeSysLog($category, $summary, $logFile = '') {
 function readSysLog($logFile = '', $limit = 0, $reverse = true) {
     // Default log path
     if (empty($logFile)) {
-        $logFile = __DIR__ . '/../data/sys_log.log';
+        $logFile = __DIR__ . '/sys_log.log';
     }
 
     // Log file doesn't exist
