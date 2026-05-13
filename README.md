@@ -19,7 +19,7 @@ A minimalist **PHP backend management system** for developers and small teams, f
 - **4 universal page types** — `page` (static), `code` (PHP logic), `code_paged` (paginated), `api` (JSON endpoint)
 - **Auto-compiled URL patterns** — Enter `/tag/{abc}`, system generates regex automatically
 - **Code block isolation** — PHP logic stored as standalone `tpl/code_*.log` files, edited via File Editor
-- **File Editor** — Edit PHP/config/template files directly from admin panel
+- **File Editor** — Add/edit text files (`css`/`html`/`log`/`txt`) via admin panel. Non-existent files auto-created as empty. Files can be called/included from front templates, code blocks, and other scenarios.
 - **Multi-account** — Role-based permission levels (20 Super → 10 Observer)
 - **Hybrid storage** — Admin configs via files, business data via MySQL (PDO)
 - **Image upload** — Supports jpg, jpeg, png, gif, webp, bmp, svg, ico
@@ -44,7 +44,8 @@ NoDB-WebBase/
 │   ├── sys_sql_func.php    # SQL helper library (config, permissions, execution)
 │   ├── auth.php            # Auth middleware
 │   ├── inc_sha.php         # SHA256 utility
-│   └── link.log            # Friend links data
+│   ├── link.log            # Friend links data
+│   └── sys_log.log         # System logs
 ├── adm/                    # Admin panel
 │   ├── login.php           # Login page
 │   ├── msg.php             # Dashboard + announcements
@@ -58,11 +59,11 @@ NoDB-WebBase/
 ├── data/                   # Data files
 │   ├── sql.log             # Table creation SQL scripts
 │   ├── editor_files.log    # Editable file list
+│   ├── editor_file_type.log # Allowed file extensions (css/html/log/txt)
 │   ├── inc_level.log       # Permission level definitions
 │   ├── site_router.log     # Route drafts
 │   ├── site_nav.log        # Front-end navigation
-│   ├── sql_protected.log   # Protected table permission whitelist
-│   └── sys_log.log         # System logs
+│   └── sql_protected.log   # Protected table permission whitelist
 ├── pics/                   # Images & styles
 │   ├── adm_css.css         # Admin styles
 │   └── style.css           # Front-end styles
@@ -275,7 +276,7 @@ Active route fields are read-only — set to Paused first to edit.
 - **4 种通用页面类型** — `page`（静态）、`code`（PHP逻辑）、`code_paged`（带分页）、`api`（JSON接口）
 - **URL Pattern 自动编译** — 输入 `/tag/{abc}`，系统自动生成正则 + 变量名
 - **代码块独立存储** — PHP 逻辑存为 `tpl/code_*.log`，通过 File Editor 编辑
-- **文件编辑器** — 后台直接编辑 PHP/配置/模板文件
+- **文件编辑器** — 后台在线添加/修改文本文件（`css`/`html`/`log`/`txt`），文件不存在时自动创建空文件。添加后的文件可在前端模板、代码块等场景中调用。
 - **多账号管理** — 基于角色权限（20 超级管理员 → 10 观察员）
 - **混合存储** — 管理员配置用文件，业务数据用 MySQL（PDO）
 - **图片上传** — 支持 jpg/jpeg/png/gif/webp/bmp/svg/ico
@@ -300,7 +301,8 @@ NoDB-WebBase/
 │   ├── sys_sql_func.php    # SQL 辅助函数库（配置、权限、执行）
 │   ├── auth.php            # 认证中间件
 │   ├── inc_sha.php         # SHA256 加密函数
-│   └── link.log            # 友情链接数据
+│   ├── link.log            # 友情链接数据
+│   └── sys_log.log         # 系统日志
 ├── adm/                    # 后台管理
 │   ├── login.php           # 登录页面
 │   ├── msg.php             # 首页 + 公告
@@ -314,11 +316,11 @@ NoDB-WebBase/
 ├── data/                   # 数据文件
 │   ├── sql.log             # 建表 SQL 脚本
 │   ├── editor_files.log    # 可编辑文件列表
+│   ├── editor_file_type.log # 允许的文件扩展名 (css/html/log/txt)
 │   ├── inc_level.log       # 级别选项
 │   ├── site_router.log     # 路由草稿
 │   ├── site_nav.log        # 前端导航数据
-│   ├── sql_protected.log   # 受保护表权限白名单
-│   └── sys_log.log         # 系统日志
+│   └── sql_protected.log   # 受保护表权限白名单
 ├── pics/                   # 图片与样式
 │   ├── adm_css.css         # 后台样式
 │   └── style.css           # 前端样式
