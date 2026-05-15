@@ -6,7 +6,7 @@
     <div class="footer-inner">
         <p class="footer-copy">&copy; <?php echo date('Y'); ?> <a href="{sys_site_weburl}">{sys_site_name}</a>. All rights reserved.</p>
         <p class="footer-contact">
-            Contact: {txt_web_about}
+            {ui_txt_about}
         </p>
     </div>
 </footer>
