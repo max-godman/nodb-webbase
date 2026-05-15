@@ -288,26 +288,17 @@ function getClientIpSegment($segments = 3) {
             return $ip;
         }
 
-        // Extract full segments
-
-        if ($maxSegments < 1) {
-            return $ip;
-        }
-
-        // Extract full segments
         $result = [];
         for ($i = 0; $i < $maxSegments; $i++) {
             $result[] = $parts[$i];
         }
 
-        $resultStr = implode(':', $result);
+        $resultStr = implode('.', $result);
 
-        // Handle half segment (e.g., 3.5 segments)
         if ($halfSegment > 0 && $maxSegments < count($parts)) {
-            $nextPart = $parts[$maxSegments] ?? '0000';
-            // Take first half (2 chars)
+            $nextPart = $parts[$maxSegments] ?? '0';
             $halfPart = substr($nextPart, 0, 2);
-            $resultStr .= ':' . $halfPart;
+            $resultStr .= '.' . $halfPart;
         }
 
         return $resultStr;
