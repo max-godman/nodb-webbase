@@ -136,6 +136,7 @@ include '../tpl/adm_head.log';
 <div class="card">
     <div class="card-title">Edit Page Content</div>
     <p class="text-muted mb-2" style="font-size:0.8rem;">
+        Data stored in: <code>inc/site_pages.php</code><br>
         Use <code>{code:var}</code> for code block variables, <code>{sys_site_name}</code> for system parameters.
         Code blocks are edited via <a href="sys.php?type=editor">File Editor</a>.
     </p>
@@ -160,7 +161,7 @@ include '../tpl/adm_head.log';
             $typeLink = ($routeStatus === 2 && !empty($previewUrl))
                 ? '<a href="' . htmlspecialchars($previewUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" style="color:inherit; text-decoration:none;" title="Open preview">' . $typeBadge . ' &#8599;</a>'
                 : $typeBadge;
-            $hasCodeFile = in_array($page['type'], ['code', 'code_paged', 'api']) && file_exists(__DIR__ . '/../tpl/code_' . $key . '.log');
+            $hasCodeFile = in_array($page['type'], ['code', 'api']) && file_exists(__DIR__ . '/../tpl/code_' . $key . '.log');
             $codeContent = $hasCodeFile ? file_get_contents(__DIR__ . '/../tpl/code_' . $key . '.log') : '';
         ?>
         <div class="card" style="margin-bottom:16px; background:#f8fafc;">
@@ -172,11 +173,12 @@ include '../tpl/adm_head.log';
             <input type="hidden" name="page_key[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($key, ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="page_type[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($page['type'], ENT_QUOTES, 'UTF-8'); ?>">
 
-            <?php if (in_array($page['type'], ['code', 'code_paged', 'api'])): ?>
+            <?php if (in_array($page['type'], ['code', 'api'])): ?>
             <div class="form-group">
                 <label>
                     Code Block
                     <?php if ($hasCodeFile): ?>
+                    <code style="font-size:0.75rem; color:#888;">tpl/code_<?php echo $key; ?>.log</code>
                     <a href="sys.php?type=editor&edit=<?php echo urlencode('tpl/code_' . $key . '.log'); ?>" style="font-size:0.8rem; font-weight:normal; margin-left:8px;">Edit in File Editor</a>
                     <?php endif; ?>
                 </label>

@@ -936,7 +936,7 @@ include '../tpl/adm_head.log';
             <table>
                 <thead>
                     <tr>
-                        <th data-label="Lock" style="width:50px;text-align:center;">Lock</th>
+                        <th data-label="#/Lock" style="width:60px;text-align:center;">#/Lock</th>
                         <th data-label="Label">Label</th>
                         <th data-label="Key">Key</th>
                         <th data-label="Value">Value</th>
@@ -947,7 +947,8 @@ include '../tpl/adm_head.log';
                         $isLocked = !empty($e['locked']);
                     ?>
                     <tr>
-                        <td data-label="Lock" style="text-align:center;">
+                        <td data-label="#/Lock" style="text-align:center;">
+                            <span style="color:#999;font-size:0.8rem;margin-right:4px;"><?php echo $i + 1; ?></span>
                             <input type="checkbox" name="cfg_locked[<?php echo $i; ?>]" value="1" <?php echo $isLocked ? 'checked' : ''; ?> title="Locked keys cannot be modified">
                         </td>
                         <td data-label="Label"><input type="text" name="cfg_label[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($e['label'], ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;"></td>
@@ -963,7 +964,8 @@ include '../tpl/adm_head.log';
                     </tr>
                     <?php endforeach; ?>
                     <tr>
-                        <td data-label="Lock" style="text-align:center;">
+                        <td data-label="#/Lock" style="text-align:center;">
+                            <span style="color:#999;font-size:0.8rem;margin-right:4px;">+</span>
                             <input type="checkbox" name="cfg_locked[new]" value="1" title="Locked keys cannot be modified">
                         </td>
                         <td data-label="Label"><input type="text" name="cfg_label[new]" placeholder="Display label" style="width:100%;"></td>
@@ -1027,7 +1029,7 @@ include '../tpl/adm_head.log';
             <table>
                 <thead>
                     <tr>
-                        <th data-label="Lock" style="width:50px;text-align:center;">Lock</th>
+                        <th data-label="#/Lock" style="width:60px;text-align:center;">#/Lock</th>
                         <th data-label="Label">Label</th>
                         <th data-label="Key">Key</th>
                         <th data-label="Value">Value</th>
@@ -1038,7 +1040,8 @@ include '../tpl/adm_head.log';
                         $isLocked = !empty($e['locked']);
                     ?>
                     <tr>
-                        <td data-label="Lock" style="text-align:center;">
+                        <td data-label="#/Lock" style="text-align:center;">
+                            <span style="color:#999;font-size:0.8rem;margin-right:4px;"><?php echo $i + 1; ?></span>
                             <input type="checkbox" name="cfg_locked[<?php echo $i; ?>]" value="1" <?php echo $isLocked ? 'checked' : ''; ?> title="Locked keys cannot be modified">
                         </td>
                         <td data-label="Label"><input type="text" name="cfg_label[<?php echo $i; ?>]" value="<?php echo htmlspecialchars($e['label'], ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;"></td>
@@ -1054,7 +1057,8 @@ include '../tpl/adm_head.log';
                     </tr>
                     <?php endforeach; ?>
                     <tr>
-                        <td data-label="Lock" style="text-align:center;">
+                        <td data-label="#/Lock" style="text-align:center;">
+                            <span style="color:#999;font-size:0.8rem;margin-right:4px;">+</span>
                             <input type="checkbox" name="cfg_locked[new]" value="1" title="Locked keys cannot be modified">
                         </td>
                         <td data-label="Label"><input type="text" name="cfg_label[new]" placeholder="Display label" style="width:100%;"></td>
@@ -1148,9 +1152,15 @@ include '../tpl/adm_head.log';
 
     // ================================================================
     case 'log': ?>
-    <!-- System Log -->
+    <!-- Log Viewer -->
     <?php
-        $logEntries = readSysLog('', 200);
+        $logname = isset($_GET['logname']) ? preg_replace('/[^a-zA-Z0-9_]/', '', $_GET['logname']) : '';
+        if (empty($logname)) {
+            $logname = 'sys_log';
+        }
+        $logFile = __DIR__ . '/../inc/' . $logname . '.log';
+
+        $logEntries = readSysLog($logFile, 200);
         $categoryNames = [
             0 => 'System',
             1 => 'Admin',
@@ -1158,13 +1168,18 @@ include '../tpl/adm_head.log';
         ];
     ?>
     <div class="card">
-        <div class="card-title">System Log (last 200)</div>
+        <div class="card-title">
+            <?php echo htmlspecialchars($logname); ?> (last 200)
+            | <a href="?type=log&logname=sys_log">System Log</a>
+            | <a href="?type=log&logname=sys_log_user">User Log</a>
+        </div>
         <?php if (empty($logEntries)): ?>
         <p class="text-muted">No log entries</p>
         <?php else: ?>
         <table>
             <thead>
                 <tr>
+                    <th data-label="#" style="width:30px;text-align:center;">#</th>
                     <th data-label="Time">Time</th>
                     <th data-label="Category">Category</th>
                     <th data-label="IP">IP</th>
@@ -1172,8 +1187,9 @@ include '../tpl/adm_head.log';
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($logEntries as $entry): ?>
+                <?php foreach ($logEntries as $idx => $entry): ?>
                 <tr>
+                    <td data-label="#" style="text-align:center;color:#999;font-size:0.8rem;"><?php echo $idx + 1; ?></td>
                     <td data-label="Time"><?php echo htmlspecialchars($entry['time'], ENT_QUOTES, 'UTF-8'); ?></td>
                     <td data-label="Category"><?php echo isset($categoryNames[$entry['category']]) ? $categoryNames[$entry['category']] : 'Ext/' . $entry['category']; ?></td>
                     <td data-label="IP"><?php echo htmlspecialchars($entry['ip'], ENT_QUOTES, 'UTF-8'); ?></td>
@@ -1234,6 +1250,7 @@ include '../tpl/adm_head.log';
 
     <div class="card">
         <div class="card-title">Editable Files</div>
+        <div style="max-height:350px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);">
         <table>
             <thead>
                 <tr>
@@ -1257,6 +1274,7 @@ include '../tpl/adm_head.log';
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
     </div>
 
     <div class="card">
@@ -1395,7 +1413,11 @@ include '../tpl/adm_head.log';
             <input type="hidden" name="sys_type" value="addpage">
             <div class="form-group">
                 <label for="page_name">Filename (alphanumeric only)</label>
-                <input type="text" id="page_name" name="page_name" placeholder="e.g. custompage" pattern="[a-zA-Z0-9]+" required style="width:100%;">
+                <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+                    <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;">add_</code>
+                    <input type="text" id="page_name" name="page_name" placeholder="name" pattern="[a-zA-Z0-9]+" required style="width:180px;">
+                    <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;">.php</code>
+                </div>
                 <p class="text-muted mt-1" style="font-size:0.8rem;">→ Creates <code>adm/add_[name].php</code> + <code>data/add_[name].log</code></p>
             </div>
             <div class="form-group">
@@ -1404,6 +1426,7 @@ include '../tpl/adm_head.log';
             </div>
             <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm create page?')">Create Page</button>
         </form>
+        <p class="text-muted mt-2" style="font-size:0.8rem;">After creation, edit the file in <strong>File Editor</strong> (System → File Editor).</p>
     </div>
     <?php break;
 
@@ -1597,6 +1620,10 @@ include '../tpl/adm_head.log';
                     <tr>
                         <td data-label="Type"><code>SELECT COUNT</code></td>
                         <td data-label="Example"><code>SELECT COUNT(*) FROM table_name</code></td>
+                    </tr>
+                    <tr>
+                        <td data-label="Type"><code>SELECT LAST 10</code></td>
+                        <td data-label="Example"><code>SELECT * FROM table_name ORDER BY id DESC LIMIT 10</code></td>
                     </tr>
                 </tbody>
             </table>

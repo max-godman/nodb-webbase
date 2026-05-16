@@ -163,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             file_put_contents($pagesFile, $pc, LOCK_EX);
 
             // Create code file if needed
-            if (in_array($newType, ['code', 'code_paged', 'api'])) {
+            if (in_array($newType, ['code', 'api'])) {
                 $compiled = compileRoutePattern($newPattern);
                 $varsStr = implode(',', $compiled['vars']);
                 createCodeFile($newKey, $varsStr);
@@ -245,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // New code/paged/api: create code file
-            if (in_array($type, ['code', 'code_paged', 'api'])) {
+            if (in_array($type, ['code', 'api'])) {
                 $entry = 'tpl/code_' . $key . '.log';
                 createCodeFile($key, $varsStr);
                 if (!in_array($entry, $editorFiles)) {
@@ -378,8 +378,22 @@ include '../tpl/adm_head.log';
         <span class="tab active">Pages</span>
         <a href="pages.php" class="tab">Content</a>
         <a href="nav.php" class="tab">Menu</a>
+        <a href="../sitemap.xml" target="_blank" class="tab">Sitemap</a>
     </div>
 </div>
+
+<?php if (isset($_GET['output']) && $_GET['output'] === '1'): ?>
+<div class="card">
+    <div class="card-title">Batch Output - All Pages</div>
+    <pre style="background:#f5f5f5;padding:16px;border-radius:var(--radius);font-size:0.875rem;line-height:1.8;overflow-x:auto;"><?php
+    foreach ($draftRoutes as $r) {
+        $pageType = isset($existingPages[$r['key']]) ? $existingPages[$r['key']]['type'] : 'page';
+        echo htmlspecialchars($r['pattern'] . "\t\t\t\t" . $r['key'] . "\t\t\t\t" . $pageType) . "\n";
+    }
+    ?></pre>
+    <a href="?" class="btn btn-primary mt-2">Back</a>
+</div>
+<?php else: ?>
 
 <!-- Add Route Form -->
 <div class="card">
@@ -388,7 +402,6 @@ include '../tpl/adm_head.log';
         URL Pattern: use <code>{name}</code> for variables (letters), <code>{1}</code> for digits. <br>
         <strong>page</strong> — static HTML &middot;
         <strong>code</strong> — PHP logic + HTML &middot;
-        <strong>code_paged</strong> — code with pagination &middot;
         <strong>api</strong> — JSON/plain response
     </p>
     <form method="post">
@@ -407,7 +420,6 @@ include '../tpl/adm_head.log';
                 <select name="new_type" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius);">
                     <option value="page" selected>page</option>
                     <option value="code">code</option>
-                    <option value="code_paged">code_paged</option>
                     <option value="api">api</option>
                 </select>
             </div>
@@ -481,9 +493,11 @@ include '../tpl/adm_head.log';
         </table>
         <div class="mt-2">
             <button type="submit" class="btn btn-primary" onclick="return confirm('Save all changes and compile active routes?')">Save</button>
+            <a href="?output=1" class="btn btn-secondary mt-2" style="margin-left:8px;">Output</a>
         </div>
         <p class="text-muted mt-1" style="font-size:0.8rem;">Saves all changes. Active (status=2) routes are validated and compiled to inc/site_router.php.</p>
     </div>
 </form>
+<?php endif; ?>
 
 <?php include '../tpl/adm_foot.log'; ?>

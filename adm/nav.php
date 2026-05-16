@@ -107,6 +107,7 @@ include '../tpl/adm_head.log';
         <a href="router.php" class="tab">Pages</a>
         <a href="pages.php" class="tab">Content</a>
         <span class="tab active">Menu</span>
+        <a href="../sitemap.xml" target="_blank" class="tab">Sitemap</a>
     </div>
 </div>
 

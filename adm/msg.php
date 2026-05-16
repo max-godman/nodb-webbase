@@ -95,6 +95,12 @@ include '../tpl/adm_head.log';
             <tr><td data-label="Item">post_max_size</td><td data-label="Value"><?php echo $postMax; ?> <?php echo (int)$postMax >= 10 ? '(Sufficient for 10MB)' : '<span style="color:#f39c12;">(May be insufficient for 10MB)</span>'; ?></td></tr>
             <tr><td data-label="Item">pics/ directory</td><td data-label="Value"><?php echo $picsWritable ? 'Exists & Writable' : '<span style="color:#e74c3c;">Missing or Not Writable</span>'; ?></td></tr>
             <tr><td data-label="Item">move_uploaded_file()</td><td data-label="Value"><?php echo function_exists('move_uploaded_file') ? 'Available' : '<span style="color:#e74c3c;">Not Available</span>'; ?></td></tr>
+            <tr><td data-label="Item">GD Extension</td><td data-label="Value"><?php echo extension_loaded('gd') ? '<span style="color:#27ae60;">Available</span>' : '<span style="color:#e74c3c;">Not Available</span>'; ?></td></tr>
+            <tr><td data-label="Item">imagecreatefromjpeg()</td><td data-label="Value"><?php echo function_exists('imagecreatefromjpeg') ? '<span style="color:#27ae60;">Available</span>' : '<span style="color:#e74c3c;">Not Available</span>'; ?></td></tr>
+            <tr><td data-label="Item">imagecreatefrompng()</td><td data-label="Value"><?php echo function_exists('imagecreatefrompng') ? '<span style="color:#27ae60;">Available</span>' : '<span style="color:#e74c3c;">Not Available</span>'; ?></td></tr>
+            <tr><td data-label="Item">imagecreatefromwebp()</td><td data-label="Value"><?php echo function_exists('imagecreatefromwebp') ? '<span style="color:#27ae60;">Available</span>' : '<span style="color:#e74c3c;">Not Available</span>'; ?></td></tr>
+            <tr><td data-label="Item">imagecopyresampled()</td><td data-label="Value"><?php echo function_exists('imagecopyresampled') ? '<span style="color:#27ae60;">Available</span>' : '<span style="color:#e74c3c;">Not Available</span>'; ?></td></tr>
+            <tr><td data-label="Item">imagecopymerge()</td><td data-label="Value"><?php echo function_exists('imagecopymerge') ? '<span style="color:#27ae60;">Available</span>' : '<span style="color:#e74c3c;">Not Available</span>'; ?></td></tr>
         </table>
     </div>
 
@@ -225,6 +231,7 @@ include '../tpl/adm_head.log';
             <tr><td data-label="Item">getThour2()</td><td data-label="Value"><?php echo getThour2(); ?></td></tr>
             <tr><td data-label="Item">getTminute()</td><td data-label="Value"><?php echo getTminute(); ?></td></tr>
             <tr><td data-label="Item">getTdayShort()</td><td data-label="Value"><?php echo getTdayShort(); ?></td></tr>
+            <tr><td data-label="Item">getYm()</td><td data-label="Value"><?php echo getYm(); ?></td></tr>
         </table>
     </div>
 
