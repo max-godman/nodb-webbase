@@ -847,6 +847,18 @@ function getTdayShort() {
 }
 
 /**
+ * Get year-month short format (4 digits, no separator)
+ *
+ * Year takes last 2 digits
+ * Example: 2605 (2026-05)
+ *
+ * @return string Format: 2605
+ */
+function getYm() {
+    return date('ym');
+}
+
+/**
  * Get array of all date formats
  * 
  * @return array Associative array containing all date formats

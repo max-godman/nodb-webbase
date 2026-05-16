@@ -43,7 +43,7 @@ return [
         'content'     => '<h2>Terms of Service & Privacy Policy</h2><p>Please read the following terms carefully...</p>',
     ],
     'tag' => [
-        'type'        => 'code_paged',
+        'type'        => 'code',
         'title'       => 'Tag: {code:tagname} - Page {code:page}',
         'description' => 'Related articles about {code:tagname}',
         'content'     => '<h1>Tag: {code:tagname}</h1><p>Page {code:page}</p>{code:list_html}',
