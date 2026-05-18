@@ -494,7 +494,7 @@ function getClientUuid() {
  * @param string $uuid UUID string
  * @return string Clock sequence (4 digits)
  */
-function getUuidClockSeq($uuid) {
+function getUuidClockSeq($uuid = '') {
     if (empty($uuid)) {
         $uuid = getClientUuid();
     }
@@ -931,8 +931,8 @@ function showErrorPage($message, $returnUrl = '') {
     if (empty($returnUrl)) $returnUrl = $_SERVER['REQUEST_URI'] ?? '';
     $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
     $returnUrl = htmlspecialchars($returnUrl, ENT_QUOTES, 'UTF-8');
-    $returnLink = !empty($returnUrl) ? '<p style="margin-top:20px;font-size:14px;"><a href="'.$returnUrl.'" style="color:#3498db;text-decoration:none;">&#8592; Refresh</a></p>' : '';
-    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Error</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#333}.e{background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1);padding:40px;max-width:500px;text-align:center;margin:20px}.i{font-size:48px;color:#e74c3c;margin-bottom:20px}.t{font-size:24px;font-weight:600;margin-bottom:10px;color:#2c3e50}.m{font-size:16px;color:#7f8c8d;line-height:1.6}a{color:#3498db;text-decoration:none}a:hover{text-decoration:underline}</style></head><body><div class="e"><div class="i">&#9888;</div><div class="t">Error</div><div class="m">'.$message.'</div>'.$returnLink.'</div></body></html>';
+    $returnLink = !empty($returnUrl) ? '<p style="margin-top:20px;font-size:14px;"><a href="'.$returnUrl.'" style="color:#3498db;text-decoration:none;">&#8592; Back</a></p>' : '';
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Tip</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#333}.e{background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1);padding:40px;max-width:500px;text-align:center;margin:20px}.i{font-size:48px;color:#e74c3c;margin-bottom:20px}.m{font-size:16px;color:#7f8c8d;line-height:1.6}a{color:#3498db;text-decoration:none}a:hover{text-decoration:underline}</style></head><body><div class="e"><div class="i">&#8505;</div><div class="m">'.$message.'</div>'.$returnLink.'</div></body></html>';
 }
 
 /**
@@ -1387,4 +1387,16 @@ function uploadImage($file, $targetName, $targetDir) {
     }
 
     return ['success' => true, 'path' => $targetName];
+}
+
+/**
+ * SHA256 hash with optional truncation
+ * 
+ * @param string $str Input string
+ * @param int    $length Output length (0 = full 64), default 64
+ * @return string SHA256 hash (hex)
+ */
+function sha256_hash($str, $length = 64) {
+    $hash = hash('sha256', $str);
+    return $length ? substr($hash, 0, $length) : $hash;
 }
