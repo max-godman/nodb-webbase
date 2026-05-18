@@ -118,10 +118,10 @@ if ($pageType === 'api') {
 }
 
 // =====================================================================
-// code/paged type: include code file and capture variables
+// code type: include code file and capture variables
 // =====================================================================
 $codeReplacements = [];
-if (in_array($pageType, ['code', 'code_paged'])) {
+if (in_array($pageType, ['code'])) {
     $codeFile = __DIR__ . '/tpl/code_' . $pageKey . '.log';
     if (file_exists($codeFile)) {
         $beforeKeys = array_keys(get_defined_vars());

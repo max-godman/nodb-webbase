@@ -205,6 +205,42 @@ $phpVersion = PHP_VERSION;
                             <?php echo function_exists('move_uploaded_file') ? 'Available' : 'Not Available'; ?>
                         </div>
                     </div>
+                    <div class="test-item">
+                        <div class="test-label">GD Extension <small>Image processing library</small></div>
+                        <div class="test-value <?php echo extension_loaded('gd') ? '' : 'error'; ?>">
+                            <?php echo extension_loaded('gd') ? 'Available' : 'Not Available'; ?>
+                        </div>
+                    </div>
+                    <div class="test-item">
+                        <div class="test-label">imagecreatefromjpeg() <small>JPEG loader</small></div>
+                        <div class="test-value <?php echo function_exists('imagecreatefromjpeg') ? '' : 'error'; ?>">
+                            <?php echo function_exists('imagecreatefromjpeg') ? 'Available' : 'Not Available'; ?>
+                        </div>
+                    </div>
+                    <div class="test-item">
+                        <div class="test-label">imagecreatefrompng() <small>PNG loader</small></div>
+                        <div class="test-value <?php echo function_exists('imagecreatefrompng') ? '' : 'error'; ?>">
+                            <?php echo function_exists('imagecreatefrompng') ? 'Available' : 'Not Available'; ?>
+                        </div>
+                    </div>
+                    <div class="test-item">
+                        <div class="test-label">imagecreatefromwebp() <small>WebP loader</small></div>
+                        <div class="test-value <?php echo function_exists('imagecreatefromwebp') ? '' : 'error'; ?>">
+                            <?php echo function_exists('imagecreatefromwebp') ? 'Available' : 'Not Available'; ?>
+                        </div>
+                    </div>
+                    <div class="test-item">
+                        <div class="test-label">imagecopyresampled() <small>Image resize</small></div>
+                        <div class="test-value <?php echo function_exists('imagecopyresampled') ? '' : 'error'; ?>">
+                            <?php echo function_exists('imagecopyresampled') ? 'Available' : 'Not Available'; ?>
+                        </div>
+                    </div>
+                    <div class="test-item">
+                        <div class="test-label">imagecopymerge() <small>Image watermark</small></div>
+                        <div class="test-value <?php echo function_exists('imagecopymerge') ? '' : 'error'; ?>">
+                            <?php echo function_exists('imagecopymerge') ? 'Available' : 'Not Available'; ?>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -486,6 +522,10 @@ $phpVersion = PHP_VERSION;
                     <div class="test-item">
                         <div class="test-label">getTdayShort() <small>6-digit yymmdd</small></div>
                         <div class="test-value"><?php echo getTdayShort(); ?></div>
+                    </div>
+                    <div class="test-item">
+                        <div class="test-label">getYm() <small>4-digit yymm</small></div>
+                        <div class="test-value"><?php echo getYm(); ?></div>
                     </div>
                 </div>
             </div>

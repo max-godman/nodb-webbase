@@ -14,7 +14,6 @@
 // 1. Load system common functions
 // ========================================
 require_once __DIR__ . '/inc/sys_inc.php';
-require_once __DIR__ . '/inc/inc_sha.php';
 
 // ========================================
 // 2. Check if already initialized
