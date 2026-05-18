@@ -20,7 +20,6 @@
 // 1. Load system config and functions
 // ========================================
 require_once __DIR__ . '/../inc/sys_inc.php';
-require_once __DIR__ . '/../inc/inc_sha.php';
 require_once __DIR__ . '/../inc/sys_admin.php';
 
 // ========================================

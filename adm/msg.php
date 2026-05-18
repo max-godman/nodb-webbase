@@ -249,7 +249,7 @@ include '../tpl/adm_head.log';
     <div class="card" style="margin-top:12px;">
         <div class="card-title" style="font-size:1rem;">15. Error Page Template</div>
         <table>
-            <tr><td data-label="Item">showErrorPage()</td><td data-label="Value"><pre style="max-height:150px;overflow:auto;font-size:0.75rem;background:#f8f9fa;padding:8px;border-radius:4px;"><?php echo htmlspecialchars(substr(showErrorPage('Test error message', 'index.php'), 0, 500)); ?>...</pre></td></tr>
+            <tr><td data-label="Item">showErrorPage()</td><td data-label="Value"><pre style="max-height:150px;overflow:auto;font-size:0.75rem;background:#f8f9fa;padding:8px;border-radius:4px;white-space:pre-wrap;word-break:break-all;"><?php echo htmlspecialchars(substr(showErrorPage('Test error message', 'index.php'), 0, 500)); ?>...</pre></td></tr>
         </table>
     </div>
 

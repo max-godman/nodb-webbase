@@ -7,7 +7,6 @@
 $pageTitle = 'System Settings';
 $pageLevel = 20;
 require_once '../inc/auth.php';
-require_once '../inc/inc_sha.php';
 include __DIR__ . '/../data/inc_level.log';
 
 // Load add page menu
@@ -568,7 +567,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $phpContent = "<?php\n"
                 . "\$pageLevel = 20;\n"
-                . "require_once '../inc/auth.php';\n\n"
+                . "require_once '../inc/auth.php';\n"
+                . "\$sysConfig = include __DIR__ . '/../inc/sys_config.php';\n\n"
                 . "// Load add page menu\n"
                 . "\$addMenuItems = [];\n"
                 . "\$addMenuFile = __DIR__ . '/../data/add_menu.log';\n"
@@ -589,8 +589,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $logContent = "<?php\n"
                 . "\$pageTitle = " . var_export($menuText, true) . ";\n"
-                . "// ====== Rect liu code area ======\n\n\n\n"
-                . "// ====== Rect liu code area ======\n"
+                . "// ====== code area ======\n\n\n\n"
+                . "// ====== code area ======\n"
                 . "include '../tpl/adm_head.log';\n"
                 . "?>\n"
                 . "<?php if (!empty(\$addMenuItems)): ?>\n"
@@ -600,13 +600,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . "    <?php endforeach; ?>\n"
                 . "</div>\n"
                 . "<?php endif; ?>\n"
-                . "<main>\n"
-                . "    <div class=\"card\">\n"
-                . "        <div class=\"card-title\"><?php echo \$pageTitle; ?></div>\n"
-                . "        <!-- ====== Rect liu code area ====== -->\n\n\n\n"
-                . "        <!-- ====== Rect liu code area ====== -->\n"
-                . "    </div>\n"
-                . "</main>\n"
+                . "<!-- ====== code area ====== -->\n\n\n\n"
+                . "<!-- ====== code area ====== -->\n"
                 . "<?php include '../tpl/adm_foot.log'; ?>\n";
             file_put_contents(__DIR__ . '/../data/add_' . $pageName . '.log', $logContent, LOCK_EX);
 
@@ -1297,7 +1292,7 @@ include '../tpl/adm_head.log';
             <input type="hidden" name="selected_file" value="<?php echo htmlspecialchars($selectedEditFile, ENT_QUOTES, 'UTF-8'); ?>">
             <div class="form-group">
                 <label>Editing: <?php echo htmlspecialchars($selectedEditFile, ENT_QUOTES, 'UTF-8'); ?></label>
-                <textarea name="file_content" rows="25" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--radius);font-family:Consolas,'Courier New',monospace;font-size:0.875rem;line-height:1.6;tab-size:4;"><?php echo htmlspecialchars($fileContent, ENT_QUOTES, 'UTF-8'); ?></textarea>
+                <textarea name="file_content" rows="25" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--radius);font-family:Consolas,'Courier New',monospace;font-size:0.875rem;line-height:1.6;tab-size:4;color:#1a237e;"><?php echo htmlspecialchars($fileContent, ENT_QUOTES, 'UTF-8'); ?></textarea>
             </div>
             <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm save file?')">Save</button>
         </form>
@@ -1427,6 +1422,9 @@ include '../tpl/adm_head.log';
             <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm create page?')">Create Page</button>
         </form>
         <p class="text-muted mt-2" style="font-size:0.8rem;">After creation, edit the file in <strong>File Editor</strong> (System → File Editor).</p>
+        <p class="text-muted mt-1" style="font-size:0.8rem;color:#856404;background:#fff3cd;padding:10px 14px;border-radius:var(--radius);border:1px solid #ffeaba;">
+            <strong>Tip:</strong> Generated pages automatically load <code>$sysConfig</code> from <code>inc/sys_config.php</code>, so you can directly reference <strong>System Params</strong> (e.g. <code>&lt;?php echo $sysConfig['sys_site_name']; ?&gt;</code>).
+        </p>
     </div>
     <?php break;
 

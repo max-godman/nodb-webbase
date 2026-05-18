@@ -6,7 +6,6 @@
 
 $pageTitle = 'Change Password';
 require_once '../inc/auth.php';
-require_once '../inc/inc_sha.php';
 
 $message = '';
 $error = '';
