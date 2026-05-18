@@ -43,7 +43,6 @@ NoDB-WebBase/
 │   ├── site_functions.php  # Front-end functions (routing, placeholders)
 │   ├── sys_sql_func.php    # SQL helper library (config, permissions, execution)
 │   ├── auth.php            # Auth middleware
-│   ├── inc_sha.php         # SHA256 utility
 │   ├── link.log            # Friend links data
 │   └── sys_log.log         # System logs
 ├── adm/                    # Admin panel
@@ -300,7 +299,6 @@ NoDB-WebBase/
 │   ├── site_functions.php  # 前端共用函数库
 │   ├── sys_sql_func.php    # SQL 辅助函数库（配置、权限、执行）
 │   ├── auth.php            # 认证中间件
-│   ├── inc_sha.php         # SHA256 加密函数
 │   ├── link.log            # 友情链接数据
 │   └── sys_log.log         # 系统日志
 ├── adm/                    # 后台管理
