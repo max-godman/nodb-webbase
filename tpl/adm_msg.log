@@ -1,14 +1,1 @@
-[2026-05-12] v0.9.0 — Routing & Page Management Rewrite
-  4 universal page types: page, code, paged, api
-  URL Pattern auto-compilation: /tag/{abc} → regex
-  Code blocks stored as tpl/code_{key}.log, editable via File Editor
-  Route status: 2=Active, 1=Paused, 0=Delete
-  Single Save button (draft + activate merged)
-  Pages → Content → Menu tab restructure
-
-[2026-05-11] v0.8.4 — Image Upload & Bug Fixes
-  uploadImage() helper function in sys_inc.php
-  checkAntiRefresh() millisecond precision
-  New type=pics tab in Settings for image management
-  Fixed Add Static Route button action submission
-  Fixed Add New Page wiping existing pages
+	Last Modified 2026-05-30 20:19:15

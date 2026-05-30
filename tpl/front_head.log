@@ -11,68 +11,31 @@
  *   $pageType       - Page type (optional, for body class)
  *   $siteNavItems   - Navigation items array (prepared by index.php)
  *   $currentPath    - Current request path (for nav highlighting)
+ *   $canonicalUrl   - Canonical URL (default from index.php, override in code file)
  *
  */
 
 $bodyClass = isset($pageType) ? 'page-' . $pageType : '';
+
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo $sysConfig['sys_site_language']; ?>">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="<?php echo isset($pageDescription) ? htmlspecialchars($pageDescription, ENT_QUOTES, 'UTF-8') : ''; ?>">
-    <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') : 'Untitled'; ?> - {sys_site_name}</title>
-    <link rel="stylesheet" href="pics/style.css"><link rel="shortcut icon" href="pics/favicon.ico">
+<head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') : 'Untitled'; ?> - {sys_site_name}</title>
+<meta name="description" content="<?php echo isset($pageDescription) ? htmlspecialchars($pageDescription, ENT_QUOTES, 'UTF-8') : ''; ?>">
+<meta name="applicable-device" content="pc,mobile"><link rel="stylesheet" href="{sys_site_weburl}/pics/style.css"><link rel="shortcut icon" href="{sys_site_weburl}/pics/favicon.ico">
+<link rel="canonical" href="{site:router}"><script src="{sys_site_weburl}/pics/ajax.js"></script><script>var popupCloseTxt='{ui_web_popup_close}';</script>
 </head>
 <body class="<?php echo htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8'); ?>">
-
 <!-- Top Bar -->
 <header class="site-header">
     <div class="header-inner">
-        <div class="site-logo">
-            <a href="{sys_site_weburl}">{sys_site_name}</a>
-        </div>
-
-        <!-- Desktop Nav -->
-        <nav class="nav-desktop">
-            <?php
-            if (!empty($siteNavItems)):
-                foreach ($siteNavItems as $item):
-                    $isActive = ($currentPath === $item['link'] || ($currentPath === '' && $item['link'] === '/'));
-                    $activeClass = $isActive ? 'active' : '';
-            ?>
-            <a href="<?php echo htmlspecialchars($item['link'], ENT_QUOTES, 'UTF-8'); ?>" class="<?php echo $activeClass; ?>">
-                <?php echo htmlspecialchars($item['text'], ENT_QUOTES, 'UTF-8'); ?>
-            </a>
-            <?php
-                endforeach;
-            endif;
-            ?>
-        </nav>
-
-        <!-- Mobile Toggle -->
-        <button class="menu-toggle" onclick="document.getElementById('navMobile').classList.toggle('active')" aria-label="Menu">&#9776;</button>
+        <button class="menu-toggle" onclick="document.getElementById('navMain').classList.toggle('active')" aria-label="Menu">&#9776;</button>
+        <div class="site-logo"><a href="{sys_site_weburl}">{sys_site_name}</a></div>
+        <nav id="navMain" class="nav-main">{site:menu}</nav>
     </div>
-
-    <!-- Mobile Nav -->
-    <nav id="navMobile" class="nav-mobile">
-        <?php
-        if (!empty($siteNavItems)):
-            foreach ($siteNavItems as $item):
-                $isActive = ($currentPath === $item['link'] || ($currentPath === '' && $item['link'] === '/'));
-                $activeClass = $isActive ? 'active' : '';
-        ?>
-        <a href="<?php echo htmlspecialchars($item['link'], ENT_QUOTES, 'UTF-8'); ?>" class="<?php echo $activeClass; ?>">
-            <?php echo htmlspecialchars($item['text'], ENT_QUOTES, 'UTF-8'); ?>
-        </a>
-        <?php
-            endforeach;
-        endif;
-        ?>
-    </nav>
 </header>
-
 <!-- Content Start -->
-<div class="site-container">
-    <main>
+<div class="site-container">  <div class=path><a href="{sys_site_weburl}">{sys_site_name}</a>{site:path} &raquo; {code:code_title}</div>
+  <main>

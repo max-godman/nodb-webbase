@@ -1,15 +1,9 @@
-    </main>
+  </main>
 </div>
 
 <!-- Contact Info -->
 <footer class="site-footer">
-    <div class="footer-inner">
-        <p class="footer-copy">&copy; <?php echo date('Y'); ?> <a href="{sys_site_weburl}">{sys_site_name}</a>. All rights reserved.</p>
-        <p class="footer-contact">
-            {ui_txt_about}
-        </p>
-    </div>
+        <p >&copy; <?php echo date('Y'); ?> <a href="{sys_site_weburl}">{sys_site_name}</a>. All rights reserved. <a href="javascript:void(0)" onclick="openshow('email')">{ui_web_contact}</a> | <a href="javascript:void(0)" onclick="openshow('terms')">{ui_web_terms}</a></p>
 </footer>
-
 </body>
 </html>

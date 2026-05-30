@@ -1,0 +1,24 @@
+<?php
+header('Content-Type: application/json; charset=utf-8');
+
+$type = $_REQUEST['type'] ?? '';
+
+if (!preg_match('/^[a-zA-Z0-9_\-]+$/', $type)) {
+    echo '{"success":false,"error":"Invalid type"}';
+    exit;
+}
+
+$file = __DIR__ . '/ajax_' . $type . '.log';
+
+if (!file_exists($file)) {
+    echo '{"success":false,"error":"Content not found"}';
+    exit;
+}
+
+$html = file_get_contents($file);
+
+if (!empty($sysConfig) && !empty($sysUi)) {
+    $html = applySysPlaceholders($html, $sysConfig, $sysUi);
+}
+
+echo json_encode(['success' => true, 'html' => $html]);

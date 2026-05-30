@@ -3,6 +3,10 @@
 
 <footer>
     NoDB-WebBase &copy; <?php echo date('Y'); ?>
+
+<canvas id="watermask" style="display:none"></canvas><script>var currentUserWaterMask = "NoDB-WebBase";</script>
+<script src="../pics/copy.js" type="text/javascript"></script>
+
 </footer>
 
 </body>
