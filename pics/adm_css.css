@@ -203,7 +203,7 @@ main {
     background: var(--bg-card);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    padding: 24px;
+    padding: 15px;
     min-height: 400px;
 }
 
@@ -387,7 +387,7 @@ footer {
 }
 
 .tab {
-    padding: 10px 20px;
+    padding: 10px 15px;
     font-size: 0.875rem;
     color: var(--text-muted);
     text-decoration: none;
