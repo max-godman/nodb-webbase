@@ -1,0 +1,8 @@
+<b>Placeholder examples:</b><br>
+<code>{sys_site_name}</code> — Site name<span style="color:#999;"> (sys_config.php, no DB)</span><br>
+<code>{ui_web_links}</code> — UI text<span style="color:#999;"> (sys_ui.php, no DB)</span><br>
+<code>{code:var}</code> — Code block variable<span style="color:#999;"> (tpl/code_*.log,</span> needs DB<span style="color:#999;">)</span><br>
+<code>{site:links}</code> — Friend links<span style="color:#999;"> (inc/link.log, no DB)</span><br>
+<code>{site:menu}</code> — Site nav<span style="color:#999;"> (adm/nav.php → data/site_nav.log, no DB)</span><br>
+<code>{site:path}</code> — Breadcrumb path<span style="color:#999;"> <span style="color:#999;"> (tpl/code_*.log,</span> needs DB<span style="color:#999;">)</span><br>
+<code>{site:router}</code> — Canonical URL<span style="color:#999;"> (auto, no DB)</span><br>

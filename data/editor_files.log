@@ -1,15 +1,23 @@
-pics/adm_css.css
-pics/style.css
-tpl/adm_head.log
-tpl/adm_foot.log
-tpl/front_head.log
-tpl/front_foot.log
-tpl/code_tag.log
-tpl/code_search.log
-tpl/code_article.log
-tpl/code_post.log
-tpl/code_sub.log
-tpl/adm_msg.log
-data/inc_level.log
-data/sql_protected.log
-data/editor_file_type.log
+data/site_tip.log|Admin: *This page tips|2026-05-30 15:43:55
+data/sys_add_menu.log|Admin:* Sys Add Menu|2026-05-25 09:58:21
+data/editor_file_type.log|Admin:* Editor File Type|2026-05-24 21:04:04
+data/editor_files.log|Admin:* This List|2026-05-24 21:19:32
+pics/adm_css.css|Admin: Css|2026-05-24 21:04:04
+pics/style.css|Web:  Style|2026-05-25 11:46:56
+tpl/adm_head.log|Admin: Head|2026-05-24 21:04:04
+tpl/adm_foot.log|Admin: Foot|2026-05-30 15:38:30
+tpl/front_head.log|Web: Front Head|2026-05-30 20:13:01
+tpl/front_foot.log|Web: Front Foot|2026-05-24 21:04:04
+tpl/code_ajax.log|Web: AJAX-openshow|2026-05-30 14:20:10
+tpl/ajax_terms.log|Web: terms|2026-05-30 20:06:35
+tpl/ajax_email.log|Web: Contact|2026-05-30 20:05:50
+data/sitemap_manual.log|Web: Sitemap Index|2026-05-30 09:40:07
+tpl/code_sitemap.log|Code: Sitemap Code|2026-05-30 14:20:10
+data/sitemap_tag.log|Web: Sitemap Tag|2026-05-30 14:18:25
+data/sitemap_info.log|Web: Sitemap Info|2026-05-30 09:39:18
+tpl/adm_msg.log|Admin: Home Msg|2026-05-30 20:18:48
+data/inc_level.log|Admin:Sys ID Level|2026-05-24 21:04:04
+data/sql_protected.log|Sys: Sql Protected|2026-05-24 21:04:04
+data/sys_sql_table.log|Sys:  Sql Table|2026-05-24 21:04:04
+data/site_tip_route.log|Admin: *Router Placeholder Tips|2026-05-30 14:27:46
+data/site_agent.log|SYS: Spam-ip-agent|2026-05-30 09:56:25

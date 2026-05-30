@@ -1,9 +1,5 @@
-2|/about.html|about||About
-2|/terms.html|terms||Terms
-1|/product.html|product||Product
-1|/|index||Home
-1|/tag/{abc}/{page}.html|tag|abc,page|Tag with pagination
-1|/search|search||Search
-1|/article/{fn}.html|article|fn|Article
-1|/post|post||Post example
-1|/sub|sub||API example
+2|/about.htm|about||
+2|/ajax|ajax||
+2|/sitemap.xml|sitemap||
+2|/faq.htm|faq||
+2|/|index||

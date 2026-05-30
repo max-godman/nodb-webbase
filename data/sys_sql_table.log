@@ -1,0 +1,16 @@
+<?php
+/**
+ * NoDB-WebBase
+ * GitHub: https://github.com/max-godman
+ *
+ * Database Table Name Constants
+ *
+ * @package NoDB-WebBase
+ */
+
+const TABLE_INFO = 'post_info';
+const TABLE_PIC  = 'post_pic';
+const TABLE_TAG  = 'post_tag';
+const TABLE_BLKIP = 'post_blkip';
+const TABLE_SPAM = 'post_spam';
+const TABLE_CITY = 'post_city';

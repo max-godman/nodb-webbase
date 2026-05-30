@@ -1,0 +1,4 @@
+*ADD|sys.php?type=addpage
+Edit|sys.php?type=editor&edit=data%2Fsys_add_menu.log
+sys.log|sys.php?type=log&logname=sys_log
+
