@@ -1,18 +1,19 @@
 <?php
 /**
- * NoDB-WebBase
- * GitHub: https://github.com/max-godman
- *
  * Front-end Router Table
- *
- * Compiled from data/site_router.log by adm/router.php.
- * Only status=2 (Active) routes appear here.
+ * Generated: 2026-05-30 14:20:10
  * Do not edit manually.
- *
- * @package NoDB-WebBase
  */
 
 return [
-    ['match' => '/about.html', 'key' => 'about', 'vars' => []],
-    ['match' => '/terms.html', 'key' => 'terms', 'vars' => []],
+    ['match' => '/about.htm', 'key' => 'about', 'vars' => array (
+)],
+    ['match' => '/ajax', 'key' => 'ajax', 'vars' => array (
+)],
+    ['match' => '/sitemap.xml', 'key' => 'sitemap', 'vars' => array (
+)],
+    ['match' => '/faq.htm', 'key' => 'faq', 'vars' => array (
+)],
+    ['match' => '/', 'key' => 'index', 'vars' => array (
+)],
 ];

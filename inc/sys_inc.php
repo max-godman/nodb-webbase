@@ -279,6 +279,36 @@ function getClientIpSegment($segments = 3) {
     $fullSegments = intval($segments);
     $halfSegment = $segments - $fullSegments;
 
+    // IPv6 address
+    if (strpos($ip, ':') !== false) {
+        $expanded = @inet_ntop(inet_pton($ip));
+        if ($expanded !== false) {
+            $ip = $expanded;
+        }
+
+        $parts = explode(':', $ip);
+        $maxSegments = min($fullSegments, count($parts));
+
+        if ($maxSegments < 1) {
+            return $ip;
+        }
+
+        $result = [];
+        for ($i = 0; $i < $maxSegments; $i++) {
+            $result[] = $parts[$i];
+        }
+
+        $resultStr = implode(':', $result);
+
+        if ($halfSegment > 0 && $maxSegments < count($parts)) {
+            $nextPart = $parts[$maxSegments] ?? '0';
+            $halfPart = substr($nextPart, 0, 2);
+            $resultStr .= ':' . $halfPart;
+        }
+
+        return $resultStr;
+    }
+
     // IPv4 address
     if (strpos($ip, '.') !== false) {
         $parts = explode('.', $ip);
@@ -350,6 +380,21 @@ function getClientCity() {
 function getClientRegion() {
     if (!empty($_SERVER['HTTP_CF_REGION'])) {
         return $_SERVER['HTTP_CF_REGION'];
+    }
+    return 'none';
+}
+
+/**
+ * Get Cloudflare Ray ID
+ *
+ * Every request proxied through Cloudflare gets a unique Ray ID.
+ * Format: 230b030023ae2822-SJC
+ *
+ * @return string Ray ID, or 'none' if not available
+ */
+function getCfRay() {
+    if (!empty($_SERVER['HTTP_CF_RAY'])) {
+        return $_SERVER['HTTP_CF_RAY'];
     }
     return 'none';
 }
@@ -856,6 +901,18 @@ function getTdayShort() {
  */
 function getYm() {
     return date('ym');
+}
+
+/**
+ * Get last month year-month short format (4 digits, no separator)
+ *
+ * Year takes last 2 digits
+ * Example: 2604 (2026-04)
+ *
+ * @return string Format: 2604
+ */
+function getLym() {
+    return date('ym', strtotime('-1 month'));
 }
 
 /**
@@ -1399,4 +1456,38 @@ function uploadImage($file, $targetName, $targetDir) {
 function sha256_hash($str, $length = 64) {
     $hash = hash('sha256', $str);
     return $length ? substr($hash, 0, $length) : $hash;
+}
+
+
+// ========================================
+// 20. Country Name Function
+// ========================================
+
+/**
+ * Get country name by ISO 3166-1 alpha-2 code
+ *
+ * Reads from data/country.log (JSON).
+ * Returns empty string if code not found or file missing.
+ *
+ * @param string $code Two-letter country code (case-insensitive)
+ * @param string $lang Language: 'cn' for Chinese, 'en' for English
+ * @return string Country name or empty string
+ */
+function getCountryName($code, $lang = 'cn')
+{
+    static $countries = null;
+    if ($countries === null) {
+        $file = __DIR__ . '/../data/country.log';
+        if (!file_exists($file)) return '';
+        $data = file_get_contents($file);
+        $countries = json_decode($data, true);
+        if (!is_array($countries)) $countries = [];
+    }
+    $code = strtoupper($code);
+    foreach ($countries as $c) {
+        if ($c['code'] === $code) {
+            return $lang === 'cn' ? $c['cn'] : $c['country'];
+        }
+    }
+    return '';
 }

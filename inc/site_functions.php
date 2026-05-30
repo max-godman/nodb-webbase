@@ -153,6 +153,9 @@ function getNavItems($navFile) {
  * @return string Content with placeholders replaced
  */
 function applySysPlaceholders($content, $sysConfig, $sysUi, $extraReplacements = []) {
+    foreach ($extraReplacements as $key => $val) {
+        $content = str_replace('{' . $key . '}', $val, $content);
+    }
     $search = [];
     $replace = [];
     $configs = [$sysConfig, $sysUi];
@@ -162,10 +165,6 @@ function applySysPlaceholders($content, $sysConfig, $sysUi, $extraReplacements =
             $search[] = '{' . $key . '}';
             $replace[] = $val;
         }
-    }
-    foreach ($extraReplacements as $key => $val) {
-        $search[] = '{' . $key . '}';
-        $replace[] = $val;
     }
     return str_replace($search, $replace, $content);
 }

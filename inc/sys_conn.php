@@ -27,3 +27,6 @@ if (empty($cfg['db_name']) || empty($cfg['db_host']) || empty($cfg['db_user'])) 
         $pdo = null;
     }
 }
+
+// Table name constants
+require_once __DIR__ . '/../data/sys_sql_table.log';
