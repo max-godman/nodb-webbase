@@ -193,6 +193,16 @@ function createSystemConfig($siteLanguage, $siteName, $siteWebUrl) {
     $content .= "    'sys_site_weburl' => " . var_export($siteWebUrl, true) . ",\n";
     $content .= "    'sys_site_weburl_locked' => 1,\n";
     $content .= "    'sys_site_weburl_txt' => 'URL',\n";
+    $content .= "\n";
+    $content .= "    // Agent Block\n";
+    $content .= "    'sys_site_agent_block' => '1',\n";
+    $content .= "    'sys_site_agent_block_locked' => 1,\n";
+    $content .= "    'sys_site_agent_block_txt' => 'Static intercept 0=off 1=on',\n";
+    $content .= "\n";
+    $content .= "    // Agent Log\n";
+    $content .= "    'sys_site_agent_log' => '1',\n";
+    $content .= "    'sys_site_agent_log_locked' => 1,\n";
+    $content .= "    'sys_site_agent_log_txt' => 'Static intercept logging 0=no 1=yes',\n";
     $content .= "];\n";
     
     if (file_put_contents($configFile, $content) === false) {

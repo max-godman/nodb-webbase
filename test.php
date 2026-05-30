@@ -527,6 +527,10 @@ $phpVersion = PHP_VERSION;
                         <div class="test-label">getYm() <small>4-digit yymm</small></div>
                         <div class="test-value"><?php echo getYm(); ?></div>
                     </div>
+                    <div class="test-item">
+                        <div class="test-label">getLym() <small>Last month 4-digit yymm</small></div>
+                        <div class="test-value"><?php echo getLym(); ?></div>
+                    </div>
                 </div>
             </div>
         </div>

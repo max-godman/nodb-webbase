@@ -1,5 +1,241 @@
 # Changelog
 
+## [1.5.0] - 2026-05-30
+
+### Added: Country Manager
+
+**Core changes:**
+- New `adm/country.php` — Full CRUD for country database with JSON storage
+- `data/country.log` — Raw country data in JSON format (id, code, country, cn, ads, letter)
+- `data/site_country.log` — Compiled HTML `<select>` cache, generated via "Regen Cache" button
+- `{site:country_en}` / `{site:country_cn}` — Front-end placeholders for English/Chinese country dropdown
+- `inc/sys_inc.php` — Added `getCountryName(code, lang)` helper function
+- Country tab: search by code/name, filter by Active/Pending status, bulk edit, single add
+
+**New files:**
+- `adm/country.php` — Country manager admin page
+- `data/country.log` — Country raw data (JSON)
+- `data/site_country.log` — Compiled HTML select cache
+
+### Added: IP / User-Agent Security System
+
+**Core changes:**
+- `data/site_agent.log` — 4-level rule system: 1=whitelist IP, 2=block UA, 3=block IP, 4=whitelist bot
+- `sys_site_agent_block` config (default 1) — Master switch: 0=off, 1=block matching agents
+- `sys_site_agent_log` config (default 1) — Logging switch: 0=no, 1=log blocked requests
+- `setup.php` — `createSystemConfig()` now generates agent block/log params on install
+- Front-end blocking integrated into `index.php` dispatch flow
+
+**New files:**
+- `data/site_agent.log` — IP/UA black/whitelist rules (48 entries covering major search engines)
+
+### Added: AJAX Popup System
+
+**Core changes:**
+- `tpl/code_ajax.log` — Generic JSON response handler, applies `{sys_xxx}` / `{ui_xxx}` placeholders
+- `tpl/ajax_{type}.log` — Popup content files (e.g. `ajax_terms.log`, `ajax_email.log`)
+- Front-end `openshow(type)` JavaScript function loads popup via `/ajax?type=...`
+
+**New files:**
+- `tpl/code_ajax.log` — AJAX popup JSON handler
+- `tpl/ajax_terms.log` — Terms of Service popup content
+- `tpl/ajax_email.log` — Contact email popup content
+
+### Added: Sitemap Auto-Generation
+
+**Core changes:**
+- `tpl/code_sitemap.log` — PHP generator for `/sitemap.xml` with 3-layer merge
+- `data/sitemap_manual.log` — Manually defined sitemap entries (pipe-delimited)
+- `data/sitemap_tag.log` — Tag-based sitemap entries (auto-generated)
+- `data/sitemap_info.log` — Info-based sitemap entries (auto-generated)
+- Route `/sitemap.xml` mapped to code page key=sitemap
+
+**New files:**
+- `tpl/code_sitemap.log` — Sitemap XML generator
+- `data/sitemap_manual.log` — Manual sitemap entries
+- `data/sitemap_tag.log` — Tag sitemap entries
+- `data/sitemap_info.log` — Info sitemap entries
+
+### Added: Friend Links Manager
+
+**Core changes:**
+- New `adm/links.php` — Quick add and bulk edit with inline delete
+- `inc/link.log` — Data storage as PHP return array
+- `{site:links}` placeholder — Renders `<ul class="friend-links">` in any template
+
+**New files:**
+- `adm/links.php` — Friend links admin page
+
+### Added: Front-end Navigation System
+
+**Core changes:**
+- New `adm/nav.php` — Add/edit/reorder nav items, set active/paused status
+- `data/site_nav.log` — Pipe-delimited storage (sort|text|link|status)
+- `{site:menu}` placeholder — Renders navigation with active state highlighting
+
+**New files:**
+- `adm/nav.php` — Front-end menu manager
+- `data/site_nav.log` — Navigation data
+
+### Added: Change Password
+
+**Core changes:**
+- New `adm/pwd.php` — Change current admin password with old password verification
+- SHA256 verification, minimum 6 characters, session cookies cleared on success
+
+**New files:**
+- `adm/pwd.php` — Password change page
+
+### Added: Extended Placeholder System
+
+**New placeholders available everywhere (templates, static pages, code blocks):**
+- `{site:menu}` — Front-end navigation menu
+- `{site:router}` — Canonical URL (auto-detected)
+- `{site:path}` — Breadcrumb path (from code blocks)
+- `{site:links}` — Friend links list
+- `{site:country_en}` / `{site:country_cn}` — Country dropdown (after Regen Cache)
+- `{code:code_title}` — Code block title variable
+- All `{ui_xxx}` placeholders from `inc/sys_ui.php`
+
+### Added: Database Table Name Constants
+
+- `data/sys_sql_table.log` — Defines `TABLE_INFO`, `TABLE_PIC`, `TABLE_TAG`, `TABLE_BLKIP`, `TABLE_SPAM`, `TABLE_CITY` constants
+
+### Changed: Expanded Language Options in Setup
+
+- `setup.php` language selector now supports 18 languages: zh, zh-TW, en, es, fr, de, ru, uk, ja, ko, pt, it, pl, sv, no, fi, tr, vi, nl, da, id, ms
+
+### Changed: Admin Panel Restructuring
+
+- **New top-level menu items**: Country, Links, Change Password
+- **Sys.php now has 12 sub-tabs**: System Info, Config, Accounts, Params, UI Text, File Editor, Pics, Menu, Add Page, System Log, SQL
+- Data sub-directory expanded with 10+ new data files
+
+**Modified files:**
+- `adm/inc_menu.log` — Added Country, Links, Password menu entries
+- `adm/sys.php` — Added sub-tabs for menu management, add page, etc.
+- `inc/sys_inc.php` — Added `getCountryName()`, enhanced placeholder resolution
+- `data/editor_files.log` — Registered all new editable files
+- `setup.php` — Added agent block/log to `createSystemConfig()`
+
+---
+
+### 新增：国家数据库管理
+
+**核心变化：**
+- 新增 `adm/country.php` — 国家数据完整 CRUD，JSON 存储
+- `data/country.log` — 原始国家数据 JSON 格式（id, code, country, cn, ads, letter）
+- `data/site_country.log` — 编译后的 HTML `<select>` 缓存，通过"Regen Cache"按钮生成
+- `{site:country_en}` / `{site:country_cn}` — 前端中英文国家下拉占位符
+- `inc/sys_inc.php` — 新增 `getCountryName(code, lang)` 辅助函数
+- 国家管理页：按代码/名称搜索，按 Active/Pending 筛选，批量编辑，单条添加
+
+**新增文件：**
+- `adm/country.php` — 国家管理后台页面
+- `data/country.log` — 国家原始数据（JSON）
+- `data/site_country.log` — 编译后的 HTML 下拉缓存
+
+### 新增：IP / User-Agent 安全系统
+
+**核心变化：**
+- `data/site_agent.log` — 4级规则系统：1=IP白名单、2=拦截UA、3=拦截IP、4=爬虫白名单
+- `sys_site_agent_block` 配置（默认1）— 总开关：0=关闭，1=拦截匹配的agent
+- `sys_site_agent_log` 配置（默认1）— 日志开关：0=不记录，1=记录被拦截请求
+- `setup.php` — `createSystemConfig()` 安装时生成 agent 拦截/日志参数
+- 前端拦截集成到 `index.php` 分发流程
+
+**新增文件：**
+- `data/site_agent.log` — IP/UA 黑白名单规则（48条，覆盖主流搜索引擎）
+
+### 新增：AJAX 弹窗系统
+
+**核心变化：**
+- `tpl/code_ajax.log` — 通用 JSON 响应处理器，自动应用 `{sys_xxx}` / `{ui_xxx}` 占位符
+- `tpl/ajax_{type}.log` — 弹窗内容文件（如 `ajax_terms.log`、`ajax_email.log`）
+- 前端 `openshow(type)` JavaScript 函数通过 `/ajax?type=...` 加载弹窗
+
+**新增文件：**
+- `tpl/code_ajax.log` — AJAX 弹窗 JSON 处理器
+- `tpl/ajax_terms.log` — 服务条款弹窗内容
+- `tpl/ajax_email.log` — 联系邮箱弹窗内容
+
+### 新增：站点地图自动生成
+
+**核心变化：**
+- `tpl/code_sitemap.log` — `/sitemap.xml` PHP 生成器，支持3层数据合并
+- `data/sitemap_manual.log` — 手动定义的站点地图条目（管道分隔）
+- `data/sitemap_tag.log` — 标签类站点地图条目（自动生成）
+- `data/sitemap_info.log` — 信息类站点地图条目（自动生成）
+- 路由 `/sitemap.xml` 映射到 code 页面 key=sitemap
+
+**新增文件：**
+- `tpl/code_sitemap.log` — 站点地图 XML 生成器
+- `data/sitemap_manual.log` — 手动站点地图条目
+- `data/sitemap_tag.log` — 标签站点地图条目
+- `data/sitemap_info.log` — 信息站点地图条目
+
+### 新增：友情链接管理
+
+**核心变化：**
+- 新增 `adm/links.php` — 快速添加和批量编辑（含删除）
+- `inc/link.log` — 数据存储为 PHP return array
+- `{site:links}` 占位符 — 在任何模板中渲染 `<ul class="friend-links">`
+
+**新增文件：**
+- `adm/links.php` — 友情链接后台页面
+
+### 新增：前端导航系统
+
+**核心变化：**
+- 新增 `adm/nav.php` — 添加/编辑/排序导航项，设置启用/暂停状态
+- `data/site_nav.log` — 管道分隔存储（sort|text|link|status）
+- `{site:menu}` 占位符 — 渲染带活跃状态高亮的导航
+
+**新增文件：**
+- `adm/nav.php` — 前端菜单管理页
+- `data/site_nav.log` — 导航数据
+
+### 新增：修改密码
+
+**核心变化：**
+- 新增 `adm/pwd.php` — 修改当前管理员密码，需验证旧密码
+- SHA256 验证，最少6位，成功后清除 Cookie 重新登录
+
+**新增文件：**
+- `adm/pwd.php` — 密码修改页
+
+### 新增：扩展占位符系统
+
+**所有位置均可使用的新占位符（模板、静态页、代码块）：**
+- `{site:menu}` — 前端导航菜单
+- `{site:router}` — 规范 URL（自动检测）
+- `{site:path}` — 面包屑导航（来自代码块）
+- `{site:links}` — 友情链接列表
+- `{site:country_en}` / `{site:country_cn}` — 国家下拉菜单（需 Regen Cache）
+- `{code:code_title}` — 代码块标题变量
+- 所有来自 `inc/sys_ui.php` 的 `{ui_xxx}` 占位符
+
+### 新增：数据库表名常量
+
+- `data/sys_sql_table.log` — 定义 `TABLE_INFO`、`TABLE_PIC`、`TABLE_TAG`、`TABLE_BLKIP`、`TABLE_SPAM`、`TABLE_CITY` 常量
+
+### 变更：安装程序语言选项扩展
+
+- `setup.php` 语言选择器现支持 18 种语言：zh, zh-TW, en, es, fr, de, ru, uk, ja, ko, pt, it, pl, sv, no, fi, tr, vi, nl, da, id, ms
+
+### 变更：后台菜单重组
+
+- **新增顶级菜单项**：Country、Links、Change Password
+- **Sys.php 现含 12 个子标签页**：系统信息、配置、账号、参数、界面文字、文件编辑器、图片、菜单、添加后台文件、系统日志、SQL
+- data 子目录新增 10+ 个数据文件
+
+**修改文件：**
+- `adm/inc_menu.log` — 新增 Country、Links、Password 菜单项
+- `adm/sys.php` — 新增菜单管理、添加后台文件等子标签
+- `inc/sys_inc.php` — 新增 `getCountryName()`，增强占位符解析
+- `data/editor_files.log` — 注册所有新增可编辑文件
+- `setup.php` — 在 `createSystemConfig()` 新增 agent 拦截/日志参数
+
 ## [1.0.3] - 2026-05-13
 
 ### Changed: Support DESC shorthand in SQL executor + add Common SQL Examples
