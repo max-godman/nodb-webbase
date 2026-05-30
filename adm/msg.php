@@ -8,21 +8,17 @@ $pageTitle = 'Home';
 require_once '../inc/auth.php';
 $startTime = microtime(true) * 1000;
 
-$menuFile = __DIR__ . '/inc_menu.log';
-$quickLinks = [];
+$addMenuItems = [];
+$menuFile = __DIR__ . '/../data/sys_add_menu.log';
 if (file_exists($menuFile)) {
     $lines = file($menuFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
         $line = trim($line);
         if (empty($line)) continue;
         $parts = explode('|', $line);
-        if (count($parts) < 3) continue;
-        $itemLevel = intval(trim($parts[0]));
-        if ($authUserlevel < $itemLevel) continue;
-        $quickLinks[] = [
-            'text' => trim($parts[1]),
-            'link' => trim($parts[2]),
-        ];
+        if (count($parts) >= 2) {
+            $addMenuItems[] = ['text' => trim($parts[0]), 'link' => trim($parts[1])];
+        }
     }
 }
 
@@ -46,10 +42,9 @@ include '../tpl/adm_head.log';
 <div class="card">
     <div class="card-title">Quick Links</div>
     <div class="d-flex gap-2 mt-2" style="flex-wrap: wrap;">
-        <?php foreach ($quickLinks as $link): ?>
-        <a href="<?php echo htmlspecialchars($link['link'], ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-primary"><?php echo htmlspecialchars($link['text'], ENT_QUOTES, 'UTF-8'); ?></a>
+        <?php foreach ($addMenuItems as $item): ?>
+        <a href="<?php echo htmlspecialchars($item['link'], ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-primary"><?php echo htmlspecialchars($item['text'], ENT_QUOTES, 'UTF-8'); ?></a>
         <?php endforeach; ?>
-        <a href="login.php?logout=out" class="btn btn-secondary">Logout</a>
     </div>
 </div>
 
@@ -158,6 +153,7 @@ include '../tpl/adm_head.log';
             <tr><td data-label="Item">getClientCountryCode()</td><td data-label="Value"><?php echo getClientCountryCode(); ?></td></tr>
             <tr><td data-label="Item">getClientCity()</td><td data-label="Value"><?php echo getClientCity(); ?></td></tr>
             <tr><td data-label="Item">getClientRegion()</td><td data-label="Value"><?php echo getClientRegion(); ?></td></tr>
+            <tr><td data-label="Item">getCfRay()</td><td data-label="Value"><?php echo getCfRay(); ?></td></tr>
         </table>
     </div>
 
@@ -232,6 +228,7 @@ include '../tpl/adm_head.log';
             <tr><td data-label="Item">getTminute()</td><td data-label="Value"><?php echo getTminute(); ?></td></tr>
             <tr><td data-label="Item">getTdayShort()</td><td data-label="Value"><?php echo getTdayShort(); ?></td></tr>
             <tr><td data-label="Item">getYm()</td><td data-label="Value"><?php echo getYm(); ?></td></tr>
+            <tr><td data-label="Item">getLym()</td><td data-label="Value"><?php echo getLym(); ?></td></tr>
         </table>
     </div>
 

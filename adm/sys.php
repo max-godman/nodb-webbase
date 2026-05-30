@@ -11,7 +11,7 @@ include __DIR__ . '/../data/inc_level.log';
 
 // Load add page menu
 $addMenuItems = [];
-$addMenuFile = __DIR__ . '/../data/add_menu.log';
+$addMenuFile = __DIR__ . '/../data/sys_add_menu.log';
 if (file_exists($addMenuFile)) {
     $lines = file($addMenuFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
@@ -27,6 +27,36 @@ if (file_exists($addMenuFile)) {
 $type = isset($_GET['type']) ? $_GET['type'] : 'info';
 $message = '';
 $error = '';
+
+// =====================================================================
+// Helpers for editor_files.log (path|display_name|timestamp)
+// =====================================================================
+function _editorFilePath($line) {
+    $parts = explode('|', trim($line), 3);
+    return $parts[0];
+}
+function _editorFileName($line) {
+    $parts = explode('|', trim($line), 3);
+    return $parts[1] ?? _autoDisplayName($parts[0] ?? '');
+}
+function _editorFileTime($line) {
+    $parts = explode('|', trim($line), 3);
+    return $parts[2] ?? '';
+}
+function _autoDisplayName($path) {
+    $base = pathinfo($path, PATHINFO_FILENAME);
+    return ucwords(str_replace(['_', '-'], ' ', $base));
+}
+function _readEditorFile($file) {
+    $lines = [];
+    if (file_exists($file)) {
+        foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            $line = trim($line);
+            if (!empty($line)) $lines[] = $line;
+        }
+    }
+    return $lines;
+}
 
 // =====================================================================
 // POST handling (before any output)
@@ -422,6 +452,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $picsDir = realpath(__DIR__ . '/../pics');
                 if ($targetPath && strpos($targetPath, $picsDir) === 0 && file_exists($targetPath)) {
                     $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'ico'];
+                    $ext = strtolower(pathinfo($targetName, PATHINFO_EXTENSION));
 
                     if (in_array($ext, $allowedExts) && unlink($targetPath)) {
                         $message = 'Image deleted: ' . htmlspecialchars($targetName);
@@ -445,12 +476,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($editorAction === 'add') {
             $dir = trim($_POST['dir'] ?? '');
             $file = trim($_POST['file'] ?? '');
+            $displayName = trim($_POST['display_name'] ?? '');
             if (empty($dir) || empty($file)) {
                 $error = 'Please select directory and enter filename';
+            } elseif (empty($displayName)) {
+                $error = 'Please enter Display Name';
             } elseif (!in_array($dir, $allowedDirs)) {
                 $error = 'Invalid directory';
             } else {
-                // Check file extension against allowed types
                 $typeFile = __DIR__ . '/../data/editor_file_type.log';
                 $allowedExts = [];
                 if (file_exists($typeFile)) {
@@ -467,15 +500,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $error = 'File type .' . htmlspecialchars($ext) . ' not allowed';
                 } else {
                     $entry = $dir . '/' . $file;
-                    $fileList = [];
-                    if (file_exists($editorFile)) {
-                        $lines = file($editorFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                        foreach ($lines as $line) {
-                            $line = trim($line);
-                            if (!empty($line)) $fileList[] = $line;
-                        }
-                    }
-                    if (in_array($entry, $fileList)) {
+                    $fileList = _readEditorFile($editorFile);
+                    $entryPaths = array_map('_editorFilePath', $fileList);
+                    if (in_array($entry, $entryPaths)) {
                         $error = 'File already in list';
                     } else {
                         $targetDir = realpath(__DIR__ . '/../' . $dir);
@@ -483,11 +510,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (!file_exists($targetPath)) {
                             file_put_contents($targetPath, '', LOCK_EX);
                         }
-                        $fileList[] = $entry;
+                        $now = date('Y-m-d H:i:s');
+                        $fileList[] = $entry . '|' . $displayName . '|' . $now;
                         $content = implode("\n", $fileList) . "\n";
                         if (file_put_contents($editorFile, $content, LOCK_EX) !== false) {
-                            $message = 'File added to list';
                             writeSysLog(1, $authUserid . ' added editable file: ' . $entry);
+                            header('Location: sys.php?type=editor&edit=' . urlencode($entry));
+                            exit;
                         } else {
                             $error = 'Save failed';
                         }
@@ -501,14 +530,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($file)) {
                 $error = 'No file specified';
             } else {
-                $fileList = [];
-                if (file_exists($editorFile)) {
-                    $lines = file($editorFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                    foreach ($lines as $line) {
-                        $line = trim($line);
-                        if (!empty($line) && $line !== $file) $fileList[] = $line;
-                    }
-                }
+                $fileList = _readEditorFile($editorFile);
+                $fileList = array_values(array_filter($fileList, function($line) use ($file) {
+                    return _editorFilePath($line) !== $file;
+                }));
                 $content = implode("\n", $fileList) . "\n";
                 if (file_put_contents($editorFile, $content, LOCK_EX) !== false) {
                     $message = 'File removed from list';
@@ -525,21 +550,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($selFile)) {
                 $error = 'No file selected';
             } else {
-                $fileList = [];
-                if (file_exists($editorFile)) {
-                    $lines = file($editorFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                    foreach ($lines as $line) {
-                        $line = trim($line);
-                        if (!empty($line)) $fileList[] = $line;
-                    }
-                }
-                if (!in_array($selFile, $fileList)) {
+                $fileList = _readEditorFile($editorFile);
+                $entryPaths = array_map('_editorFilePath', $fileList);
+                $idx = array_search($selFile, $entryPaths);
+                if ($idx === false) {
                     $error = 'File not in editable list';
                 } else {
                     $fullPath = realpath(__DIR__ . '/../' . $selFile);
                     $rootPath = realpath(__DIR__ . '/..');
                     if ($fullPath && strpos($fullPath, $rootPath) === 0) {
                         if (file_put_contents($fullPath, $fileContent, LOCK_EX) !== false) {
+                            $now = date('Y-m-d H:i:s');
+                            $oldLine = $fileList[$idx];
+                            $fileList[$idx] = _editorFilePath($oldLine) . '|' . _editorFileName($oldLine) . '|' . $now;
+                            if (realpath($fullPath) !== realpath($editorFile)) {
+                                file_put_contents($editorFile, implode("\n", $fileList) . "\n", LOCK_EX);
+                            }
                             $message = 'File saved';
                             writeSysLog(1, $authUserid . ' saved file: ' . $selFile);
                         } else {
@@ -557,6 +583,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($postType === 'addpage') {
         $pageName = preg_replace('/[^a-zA-Z0-9]/', '', trim($_POST['page_name'] ?? ''));
         $menuText = trim($_POST['menu_text'] ?? '');
+        $pageLevel = trim($_POST['page_level'] ?? '');
+        if (empty($pageLevel) || !ctype_digit($pageLevel)) $pageLevel = '20';
 
         if (empty($pageName)) {
             $error = 'Filename cannot be empty';
@@ -566,12 +594,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'File adm/add_' . $pageName . '.php already exists';
         } else {
             $phpContent = "<?php\n"
-                . "\$pageLevel = 20;\n"
+                . "\$pageLevel = " . $pageLevel . ";\n"
                 . "require_once '../inc/auth.php';\n"
                 . "\$sysConfig = include __DIR__ . '/../inc/sys_config.php';\n\n"
                 . "// Load add page menu\n"
                 . "\$addMenuItems = [];\n"
-                . "\$addMenuFile = __DIR__ . '/../data/add_menu.log';\n"
+                . "\$addMenuFile = __DIR__ . '/../data/sys_add_menu.log';\n"
                 . "if (file_exists(\$addMenuFile)) {\n"
                 . "    \$lines = file(\$addMenuFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);\n"
                 . "    foreach (\$lines as \$line) {\n"
@@ -589,7 +617,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $logContent = "<?php\n"
                 . "\$pageTitle = " . var_export($menuText, true) . ";\n"
-                . "// ====== code area ======\n\n\n\n"
+                . "// Access Level: " . $pageLevel . "\n"
+                . "// ====== code area ======\n\n"
+                . "// require_once __DIR__ . '/../inc/sys_conn.php'; // DB connection\n\n"
                 . "// ====== code area ======\n"
                 . "include '../tpl/adm_head.log';\n"
                 . "?>\n"
@@ -606,33 +636,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             file_put_contents(__DIR__ . '/../data/add_' . $pageName . '.log', $logContent, LOCK_EX);
 
             $editorFile = __DIR__ . '/../data/editor_files.log';
-            $fileList = [];
-            if (file_exists($editorFile)) {
-                $lines = file($editorFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                foreach ($lines as $line) {
-                    $line = trim($line);
-                    if (!empty($line)) $fileList[] = $line;
-                }
-            }
-            $fileList[] = 'data/add_' . $pageName . '.log';
+            $now = date('Y-m-d H:i:s');
+            $fileList = _readEditorFile($editorFile);
+            $fileList[] = 'data/add_' . $pageName . '.log|' . $menuText . '|' . $now;
             file_put_contents($editorFile, implode("\n", $fileList) . "\n", LOCK_EX);
 
-            // Add to data/add_menu.log
-            $addMenuFile = __DIR__ . '/../data/add_menu.log';
+            // Add to data/sys_add_menu.log
+            $addMenuFile = __DIR__ . '/../data/sys_add_menu.log';
             $menuAppend = $menuText . '|add_' . $pageName . '.php';
             if (!file_exists($addMenuFile)) {
-                $menuFirstLines = ['Edit|sys.php?type=editor&edit=data%2Fadd_menu.log', $menuAppend];
+                $menuFirstLines = ['Edit|sys.php?type=editor&edit=data%2Fsys_add_menu.log', $menuAppend];
                 file_put_contents($addMenuFile, implode("\n", $menuFirstLines) . "\n", LOCK_EX);
                 // Register in editor list
-                $fileList = [];
-                if (file_exists($editorFile)) {
-                    $lines = file($editorFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                    foreach ($lines as $line) {
-                        $line = trim($line);
-                        if (!empty($line)) $fileList[] = $line;
-                    }
-                }
-                $fileList[] = 'data/add_menu.log';
+                $fileList = _readEditorFile($editorFile);
+                $fileList[] = 'data/sys_add_menu.log|Admin: Add Menu|' . $now;
                 file_put_contents($editorFile, implode("\n", $fileList) . "\n", LOCK_EX);
             } else {
                 $menuLines = file($addMenuFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -1204,18 +1221,16 @@ include '../tpl/adm_head.log';
         $editorFile = __DIR__ . '/../data/editor_files.log';
         $allowedDirs = ['pics', 'tpl', 'data'];
 
-        $fileList = [];
-        if (file_exists($editorFile)) {
-            $lines = file($editorFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            foreach ($lines as $line) {
-                $line = trim($line);
-                if (!empty($line)) $fileList[] = $line;
-            }
-        }
+        $fileList = _readEditorFile($editorFile);
+        usort($fileList, function($a, $b) {
+            return strcmp(dirname(_editorFilePath($a)), dirname(_editorFilePath($b)));
+        });
+        $filePaths = array_map('_editorFilePath', $fileList);
 
         $selectedEditFile = isset($_GET['edit']) ? trim($_GET['edit']) : '';
+        $selectedEditName = '';
         $fileContent = '';
-        if (!empty($selectedEditFile) && in_array($selectedEditFile, $fileList)) {
+        if (!empty($selectedEditFile) && in_array($selectedEditFile, $filePaths)) {
             $fullPath = realpath(__DIR__ . '/../' . $selectedEditFile);
             $rootPath = realpath(__DIR__ . '/..');
             if ($fullPath && strpos($fullPath, $rootPath) === 0) {
@@ -1224,23 +1239,45 @@ include '../tpl/adm_head.log';
                     $fileContent = $loadedContent;
                 }
             }
+            $idx = array_search($selectedEditFile, $filePaths);
+            if ($idx !== false) {
+                $selectedEditName = _editorFileName($fileList[$idx]);
+            }
         }
     ?>
+
+<?php if (!empty($selectedEditFile) && in_array($selectedEditFile, $filePaths)): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var el = document.getElementById('edit-area');
+    if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+});
+</script>
+<?php endif; ?>
 
     <div class="card">
         <div class="card-title">Add File to List</div>
         <form method="post" class="d-flex gap-2 align-center" style="flex-wrap:wrap;">
             <input type="hidden" name="sys_type" value="editor">
             <input type="hidden" name="editor_action" value="add">
-            <select name="dir" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;">
+            <select name="dir" required style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;">
                 <option value="">-- Dir --</option>
                 <?php foreach ($allowedDirs as $dir): ?>
                 <option value="<?php echo $dir; ?>"><?php echo $dir; ?>/</option>
                 <?php endforeach; ?>
             </select>
-            <input type="text" name="file" placeholder="Filename (e.g. custom.css)" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;min-width:200px;">
+            <input type="text" name="file" required placeholder="Filename (e.g. custom.css)" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;min-width:200px;">
+            <input type="text" name="display_name" required placeholder="Display Name" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;min-width:180px;">
             <button type="submit" class="btn btn-primary" style="padding:8px 16px;" onclick="return confirm('Confirm add to list?')">Add to List</button>
         </form>
+        <div class="card-tips" style="margin-top:12px;padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius);font-size:0.85rem;color:#166534;line-height:1.7;">
+            <?php
+            $tipFile = __DIR__ . '/../data/site_tip.log';
+            if (file_exists($tipFile)) {
+                echo file_get_contents($tipFile);
+            }
+            ?>
+        </div>
     </div>
 
     <div class="card">
@@ -1249,20 +1286,28 @@ include '../tpl/adm_head.log';
         <table>
             <thead>
                 <tr>
+                    <th data-label="Display Name">Display Name</th>
                     <th data-label="File Path">File Path</th>
+                    <th data-label="Last Modified" style="width:170px;">Last Modified</th>
                     <th data-label="Action" style="width:80px;">Remove</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($fileList as $f): ?>
+                <?php foreach ($fileList as $f):
+                    $fPath = _editorFilePath($f);
+                    $fName = _editorFileName($f);
+                    $fTime = _editorFileTime($f);
+                ?>
                 <tr>
-                    <td data-label="File Path"><a href="?type=editor&edit=<?php echo urlencode($f); ?>" class="<?php echo $f === $selectedEditFile ? 'fw-bold' : ''; ?>"><?php echo htmlspecialchars($f, ENT_QUOTES, 'UTF-8'); ?></a></td>
+                    <td data-label="Display Name"><?php echo htmlspecialchars($fName, ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td data-label="File Path"><a href="?type=editor&edit=<?php echo urlencode($fPath); ?>" class="<?php echo $fPath === $selectedEditFile ? 'fw-bold' : ''; ?>"><?php echo htmlspecialchars($fPath, ENT_QUOTES, 'UTF-8'); ?></a></td>
+                    <td data-label="Last Modified"><?php echo htmlspecialchars($fTime, ENT_QUOTES, 'UTF-8'); ?></td>
                     <td data-label="Action" class="text-center">
                         <form method="post" style="display:inline;">
                             <input type="hidden" name="sys_type" value="editor">
                             <input type="hidden" name="editor_action" value="remove">
-                            <input type="hidden" name="file" value="<?php echo htmlspecialchars($f, ENT_QUOTES, 'UTF-8'); ?>">
-                            <button type="submit" class="btn btn-secondary" style="padding:4px 10px;font-size:0.8rem;" onclick="return confirm('Confirm remove?')">Remove</button>
+                            <input type="hidden" name="file" value="<?php echo htmlspecialchars($fPath, ENT_QUOTES, 'UTF-8'); ?>">
+                            <button type="submit" class="btn btn-secondary" style="padding:4px 10px;font-size:0.8rem;" onclick="return confirm('Confirm remove <?php echo htmlspecialchars($fPath, ENT_QUOTES, 'UTF-8'); ?>?')">Remove</button>
                         </form>
                     </td>
                 </tr>
@@ -1272,32 +1317,21 @@ include '../tpl/adm_head.log';
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="edit-area">
         <div class="card-title">Edit File Content</div>
-        <form method="get" class="mb-2">
-            <div class="d-flex gap-2 align-center" style="flex-wrap:wrap;">
-                <input type="hidden" name="type" value="editor">
-                <select name="edit" onchange="this.form.submit()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;min-width:300px;">
-                    <option value="">-- Select file --</option>
-                    <?php foreach ($fileList as $f): ?>
-                    <option value="<?php echo htmlspecialchars($f, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $f === $selectedEditFile ? 'selected' : ''; ?>><?php echo htmlspecialchars($f, ENT_QUOTES, 'UTF-8'); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-        </form>
-        <?php if (!empty($selectedEditFile) && in_array($selectedEditFile, $fileList)): ?>
+        <?php if (!empty($selectedEditFile) && in_array($selectedEditFile, $filePaths)): ?>
         <form method="post">
             <input type="hidden" name="sys_type" value="editor">
             <input type="hidden" name="editor_action" value="save">
             <input type="hidden" name="selected_file" value="<?php echo htmlspecialchars($selectedEditFile, ENT_QUOTES, 'UTF-8'); ?>">
             <div class="form-group">
-                <label>Editing: <?php echo htmlspecialchars($selectedEditFile, ENT_QUOTES, 'UTF-8'); ?></label>
+                <label>Editing: <?php echo htmlspecialchars($selectedEditName, ENT_QUOTES, 'UTF-8'); ?> (<?php echo htmlspecialchars($selectedEditFile, ENT_QUOTES, 'UTF-8'); ?>)</label>
                 <textarea name="file_content" rows="25" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--radius);font-family:Consolas,'Courier New',monospace;font-size:0.875rem;line-height:1.6;tab-size:4;color:#1a237e;"><?php echo htmlspecialchars($fileContent, ENT_QUOTES, 'UTF-8'); ?></textarea>
             </div>
-            <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm save file?')">Save</button>
+            <button type="submit" class="btn btn-primary" onclick="return confirm('Save file: <?php echo htmlspecialchars($selectedEditName, ENT_QUOTES, 'UTF-8'); ?> (<?php echo htmlspecialchars($selectedEditFile, ENT_QUOTES, 'UTF-8'); ?>)?')">Save</button>
         </form>
         <?php else: ?>
-        <p class="text-muted">Select a file above to start editing</p>
+        <p class="text-muted">Select a file from the list above to start editing</p>
         <?php endif; ?>
     </div>
     <style>.fw-bold { font-weight: 600; }</style>
@@ -1418,6 +1452,11 @@ include '../tpl/adm_head.log';
             <div class="form-group">
                 <label for="menu_text">Page Title (required)</label>
                 <input type="text" id="menu_text" name="menu_text" placeholder="e.g. Custom Page" required style="width:100%;">
+            </div>
+            <div class="form-group">
+                <label for="page_level">Access Level (required)</label>
+                <input type="number" id="page_level" name="page_level" value="20" min="1" max="99" required style="width:120px;">
+                <p class="text-muted" style="font-size:0.8rem;">Admin access level. Lower = more restricted. Default: 20.</p>
             </div>
             <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm create page?')">Create Page</button>
         </form>
@@ -1563,7 +1602,16 @@ include '../tpl/adm_head.log';
     </div>
     <?php endif; ?>
 
-    <!-- Card 3: Common SQL Examples -->
+    <!-- Card 3: Developer Notes -->
+    <div class="card">
+        <div class="card-title">Developer Notes</div>
+        <ul style="margin:0;padding-left:20px;line-height:2;">
+            <li>Database connection is established via <code>inc/sys_conn.php</code> (loaded by <code>index.php</code>). </li>
+            <li>Table name constants (<code>TABLE_INFO</code>, <code>TABLE_PIC</code>, etc.) are defined in <code>data/sys_sql_table.log</code> — edit via <strong>System → File Editor</strong>.</li>
+        </ul>
+    </div>
+
+    <!-- Card 4: Common SQL Examples -->
     <div class="card">
         <div class="card-title">Common SQL Examples</div>
         <div style="overflow-x:auto;">

@@ -107,12 +107,12 @@ include '../tpl/adm_head.log';
         <a href="router.php" class="tab">Pages</a>
         <a href="pages.php" class="tab">Content</a>
         <span class="tab active">Menu</span>
-        <a href="../sitemap.xml" target="_blank" class="tab">Sitemap</a>
     </div>
 </div>
 
 <div class="card">
     <div class="card-title">Edit Menu</div>
+    <p class="text-muted mb-1" style="font-size:0.8rem;">This menu can be referenced and loaded in templates via {site:menu}.</p>
     <p class="text-muted mb-2" style="font-size:0.8rem;">Format: sort|text|link|status (0=hide/1=show). Use <code>{sys_site_weburl}</code> for absolute URLs (e.g. <code>{sys_site_weburl}/about.html</code>).</p>
     <form method="post">
         <table>
@@ -157,7 +157,7 @@ include '../tpl/adm_head.log';
                     <td data-label="Text"><input type="text" name="new_text" placeholder="New nav text" style="width:100%;"></td>
                     <td data-label="Link"><input type="text" name="new_link" placeholder="e.g. /about.html" style="width:100%;"></td>
                     <td data-label="Active" class="text-center">
-                        <input type="checkbox" name="new_status" value="1" checked>
+                        <input type="checkbox" name="new_status" value="1" >
                     </td>
                     <td data-label="Delete" class="text-muted" style="font-size:0.8rem;">New</td>
                 </tr>

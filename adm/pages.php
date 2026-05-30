@@ -72,33 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (file_put_contents($pagesFile, $pc, LOCK_EX) !== false) {
         $message = 'Content saved';
         writeSysLog(1, $authUserid . ' updated page content');
-
-        // Auto-generate sitemap.xml for active static pages
-        $sitemapConfigFile = __DIR__ . '/../inc/sys_config.php';
-        if (file_exists($sitemapConfigFile)) {
-            $sitemapCfg = include $sitemapConfigFile;
-            $baseUrl = isset($sitemapCfg['sys_site_weburl']) ? rtrim($sitemapCfg['sys_site_weburl'], '/') : '';
-            if (!empty($baseUrl)) {
-                $activePages = [];
-                foreach ($newPages as $key => $page) {
-                    if ($page['type'] === 'page' && isset($routerStatusMap[$key]) && $routerStatusMap[$key] === 2) {
-                        $activePages[$key] = $page;
-                    }
-                }
-                $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n"
-                     . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-                foreach ($activePages as $key => $page) {
-                    $pattern = $routerPatternMap[$key] ?? '';
-                    if (!empty($pattern)) {
-                        $loc = $baseUrl . $pattern;
-                        $xml .= '  <url><loc>' . htmlspecialchars($loc, ENT_XML1, 'UTF-8') . '</loc></url>' . "\n";
-                    }
-                }
-                $xml .= '</urlset>' . "\n";
-                file_put_contents(__DIR__ . '/../sitemap.xml', $xml, LOCK_EX);
-                writeSysLog(1, $authUserid . ' generated sitemap.xml (' . count($activePages) . ' pages)');
-            }
-        }
     } else {
         $error = 'Save failed';
     }
@@ -129,16 +102,20 @@ include '../tpl/adm_head.log';
         <a href="router.php" class="tab">Pages</a>
         <span class="tab active">Content</span>
         <a href="nav.php" class="tab">Menu</a>
-        <a href="../sitemap.xml" target="_blank" class="tab">Sitemap</a>
+        <a href="/sitemap.xml" target="_blank" class="tab">Sitemap</a>
     </div>
 </div>
 
 <div class="card">
     <div class="card-title">Edit Page Content</div>
-    <p class="text-muted mb-2" style="font-size:0.8rem;">
-        Data stored in: <code>inc/site_pages.php</code><br>
-        Use <code>{code:var}</code> for code block variables, <code>{sys_site_name}</code> for system parameters.
-        Code blocks are edited via <a href="sys.php?type=editor">File Editor</a>.
+    <p class="text-muted mb-2" style="font-size:0.8rem; line-height:1.6;">
+        <?php
+        $tipFile = __DIR__ . '/../data/site_tip_route.log';
+        if (file_exists($tipFile)) {
+            echo file_get_contents($tipFile);
+        }
+        ?>
+        <span style="color:#999;">Data stored in <code>inc/site_pages.php</code>. Code blocks edited via <a href="sys.php?type=editor">File Editor</a>.</span>
     </p>
     <form method="post">
         <?php if (empty($pages)): ?>
@@ -197,13 +174,6 @@ include '../tpl/adm_head.log';
             </div>
             <div class="form-group">
                 <label>Content (HTML)</label>
-                <div style="font-size:0.8rem; color:#555; margin-bottom:6px; line-height:1.6; background:#f1f1f1; padding:8px 10px; border-radius:var(--radius);">
-                    <b>Placeholder examples:</b><br>
-                    <code>{sys_site_name}</code> — System param (site name)<br>
-                    <code>{txt_home}</code> — UI text<br>
-                    <code>{code:tagname}</code> — Code block variable<br>
-                    <code>{site:links}</code> — Friendly links
-                </div>
                 <textarea name="page_content[<?php echo $i; ?>]" rows="6" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); font-family:Consolas,'Courier New',monospace; font-size:0.875rem; resize:vertical;"><?php echo htmlspecialchars($page['content'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
             </div>
             <?php else: ?>

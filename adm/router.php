@@ -28,6 +28,32 @@ $message = '';
 $error   = '';
 
 // =====================================================================
+// Helpers for editor_files.log (path|display_name|timestamp)
+// =====================================================================
+function _editorFilePath($line) {
+    $parts = explode('|', trim($line), 3);
+    return $parts[0];
+}
+function _editorFileName($line) {
+    $parts = explode('|', trim($line), 3);
+    return $parts[1] ?? _autoDisplayName($parts[0] ?? '');
+}
+function _autoDisplayName($path) {
+    $base = pathinfo($path, PATHINFO_FILENAME);
+    return ucwords(str_replace(['_', '-'], ' ', $base));
+}
+function _readEditorFile($file) {
+    $lines = [];
+    if (file_exists($file)) {
+        foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            $line = trim($line);
+            if (!empty($line)) $lines[] = $line;
+        }
+    }
+    return $lines;
+}
+
+// =====================================================================
 // Read existing draft
 // =====================================================================
 $draftRoutes = [];
@@ -60,13 +86,8 @@ if (file_exists($pagesFile)) {
 // =====================================================================
 // Read editor file list
 // =====================================================================
-$editorFiles = [];
-if (file_exists($editorListFile)) {
-    $lines = file($editorListFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $editorFiles[] = trim($line);
-    }
-}
+$editorFiles = _readEditorFile($editorListFile);
+$editorPaths = array_map('_editorFilePath', $editorFiles);
 
 // =====================================================================
 // Helper: create default page config
@@ -119,7 +140,7 @@ function removeCodeFile($key, &$editorFiles) {
     }
     $entry = 'tpl/code_' . $key . '.log';
     $editorFiles = array_values(array_filter($editorFiles, function($f) use ($entry) {
-        return $f !== $entry;
+        return _editorFilePath($f) !== $entry;
     }));
 }
 
@@ -169,8 +190,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 createCodeFile($newKey, $varsStr);
                 // Add to editor list
                 $entry = 'tpl/code_' . $newKey . '.log';
-                if (!in_array($entry, $editorFiles)) {
-                    $editorFiles[] = $entry;
+                if (!in_array($entry, $editorPaths)) {
+                    $now = date('Y-m-d H:i:s');
+                    $editorFiles[] = $entry . '|Router: ' . $newKey . '|' . $now;
+                    $editorPaths[] = $entry;
                     file_put_contents($editorListFile, implode("\n", $editorFiles) . "\n", LOCK_EX);
                 }
             }
@@ -248,8 +271,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (in_array($type, ['code', 'api'])) {
                 $entry = 'tpl/code_' . $key . '.log';
                 createCodeFile($key, $varsStr);
-                if (!in_array($entry, $editorFiles)) {
-                    $editorFiles[] = $entry;
+                if (!in_array($entry, $editorPaths)) {
+                    $now = date('Y-m-d H:i:s');
+                    $editorFiles[] = $entry . '|Router: ' . $key . '|' . $now;
+                    $editorPaths[] = $entry;
+                    $editorModified = true;
+                } else {
+                    // Update timestamp
+                    $idx = array_search($entry, $editorPaths);
+                    $oldLine = $editorFiles[$idx];
+                    $editorFiles[$idx] = _editorFilePath($oldLine) . '|' . _editorFileName($oldLine) . '|' . date('Y-m-d H:i:s');
                     $editorModified = true;
                 }
             }
@@ -378,7 +409,7 @@ include '../tpl/adm_head.log';
         <span class="tab active">Pages</span>
         <a href="pages.php" class="tab">Content</a>
         <a href="nav.php" class="tab">Menu</a>
-        <a href="../sitemap.xml" target="_blank" class="tab">Sitemap</a>
+        <a href="/sitemap.xml" target="_blank" class="tab">Sitemap</a>
     </div>
 </div>
 
@@ -403,6 +434,10 @@ include '../tpl/adm_head.log';
         <strong>page</strong> — static HTML &middot;
         <strong>code</strong> — PHP logic + HTML &middot;
         <strong>api</strong> — JSON/plain response
+    </p>
+    <p class="text-warning mb-2" style="font-size:0.8rem;">
+        <strong>Note:</strong> <code>/ajax -> api</code> route is the built-in popup overlay handler — do NOT modify or delete.
+        <code>tpl/code_ajax.log</code> is the built-in popup overlay handler — do NOT modify or delete.
     </p>
     <form method="post">
         <input type="hidden" name="router_action" value="add">

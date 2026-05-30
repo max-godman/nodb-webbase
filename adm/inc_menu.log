@@ -1,7 +1,9 @@
 10|Home|msg.php
 10|Change Password|pwd.php
 20|Settings|sys.php
-20|Links|links.php
+15|Links|links.php
+15|Country|country.php
 20|Pages|router.php
 20|Content|pages.php
 20|Menu|nav.php
+
