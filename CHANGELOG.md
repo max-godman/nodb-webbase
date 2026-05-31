@@ -20,7 +20,7 @@
 ### Added: IP / User-Agent Security System
 
 **Core changes:**
-- `data/site_agent.log` — 4-level rule system: 1=whitelist IP, 2=block UA, 3=block IP, 4=whitelist bot
+- `data/site_agent.log` — 4-level rule system: 1=IP blacklist (503), 2=UA blacklist (503), 3=IP whitelist (pass), 4=UA whitelist (pass)
 - `sys_site_agent_block` config (default 1) — Master switch: 0=off, 1=block matching agents
 - `sys_site_agent_log` config (default 1) — Logging switch: 0=no, 1=log blocked requests
 - `setup.php` — `createSystemConfig()` now generates agent block/log params on install
@@ -138,7 +138,7 @@
 ### 新增：IP / User-Agent 安全系统
 
 **核心变化：**
-- `data/site_agent.log` — 4级规则系统：1=IP白名单、2=拦截UA、3=拦截IP、4=爬虫白名单
+- `data/site_agent.log` — 4级规则系统：1=IP黑名单(503)、2=UA黑名单(503)、3=IP白名单(放行)、4=UA白名单(放行)
 - `sys_site_agent_block` 配置（默认1）— 总开关：0=关闭，1=拦截匹配的agent
 - `sys_site_agent_log` 配置（默认1）— 日志开关：0=不记录，1=记录被拦截请求
 - `setup.php` — `createSystemConfig()` 安装时生成 agent 拦截/日志参数
