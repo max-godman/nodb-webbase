@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Fixed values
     $siteName = 'NoDB-WebBase';
-    $siteWebUrl = 'https://www.google.com/';
+    $siteWebUrl = 'https://' . getHttpHost();
     
     // Validate required fields
     if (empty($siteLanguage)) {
