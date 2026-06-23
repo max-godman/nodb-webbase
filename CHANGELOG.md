@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.5.1] - 2026-06-23
+
+### Fixed: Friend Links Security — added `rel="noopener"`
+
+**Core changes:**
+- `index.php` friend links anchor now includes `rel="noopener"` on `target="_blank"` links to prevent tab-napping vulnerability
+
+**Modified files:**
+- `index.php` — Added `rel="noopener"` to friend link output (line 105)
+
+### 修复：友情链接安全 — 添加 `rel="noopener"`
+
+**核心变化：**
+- `index.php` 友情链接的 `target="_blank"` 超链接现在包含 `rel="noopener"`，防止新页面通过 `window.opener` 操控原页面
+
+**修改文件：**
+- `index.php` — 友情链接输出添加 `rel="noopener"`（第 105 行）
+
 ## [1.5.0] - 2026-05-30
 
 ### Added: Country Manager

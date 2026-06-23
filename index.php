@@ -102,7 +102,7 @@ $linksHtml = '';
 if (!empty($links)) {
     $html = '<div class="friend-links">' . htmlspecialchars($sysUi['ui_web_links'] ?? '');
     foreach ($links as $link) {
-        $html .= '<li><a href="' . htmlspecialchars($link['url'], ENT_QUOTES, 'UTF-8') . '" target="_blank" >' . htmlspecialchars($link['text'], ENT_QUOTES, 'UTF-8') . '</a></li>';
+        $html .= '<li><a href="' . htmlspecialchars($link['url'], ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener">' . htmlspecialchars($link['text'], ENT_QUOTES, 'UTF-8') . '</a></li>';
     }
     $html .= '</div>';
     $linksHtml = $html;
