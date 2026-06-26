@@ -210,6 +210,7 @@ main {
     line-height: 1;
 }
 .popup-close:hover { opacity: .7; }
+.copyright::after { font-size:11px;color:#999;content:" Built with NoDB-Webbase"; }
 /* ================================
    Responsive
    ================================ */
