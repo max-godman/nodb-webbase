@@ -3,7 +3,7 @@
 
 <!-- Contact Info -->
 <footer class="site-footer">
-        <p >&copy; <?php echo date('Y'); ?> <a href="{sys_site_weburl}">{sys_site_name}</a>. All rights reserved. <a href="javascript:void(0)" onclick="openshow('email')">{ui_web_contact}</a> | <a href="javascript:void(0)" onclick="openshow('terms')">{ui_web_terms}</a></p>
+        <p >&copy; <?php echo date('Y'); ?> <a href="{sys_site_weburl}">{sys_site_name}</a>. All rights reserved. <a href="javascript:void(0)" onclick="openshow('email')">{ui_web_contact}</a> | <a href="javascript:void(0)" onclick="openshow('terms')">{ui_web_terms}</a></p><p class=copyright></p>
 </footer>
 </body>
 </html>
