@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.5.2] - 2026-06-27
+
+### Fixed: OPcache stale config after login / password change — added `opcache_invalidate()`
+
+**Core changes:**
+- `adm/login.php` — After writing new `$sys_userint` to the account config file, `opcache_invalidate()` is now called to prevent OPcache from serving the stale cached version on the subsequent request
+- `adm/pwd.php` — Same fix: `opcache_invalidate()` after writing new password hash and `$sys_userint`
+- Without this fix, users with OPcache enabled would see "Session expired, please login again" immediately after a successful login or password change (first request reads old cached config)
+
+**Modified files:**
+- `adm/login.php` — Added `opcache_invalidate()` after `file_put_contents()` (line 140-143)
+- `adm/pwd.php` — Added `opcache_invalidate()` after `file_put_contents()` (line 43-45)
+
+### 修复：登录/改密码后 OPcache 缓存旧配置 — 添加 `opcache_invalidate()`
+
+**核心变化：**
+- `adm/login.php` — 写入新的 `$sys_userint` 到账号配置文件后，立即调用 `opcache_invalidate()` 清除 OPcache 缓存，防止后续请求读取到旧文件内容
+- `adm/pwd.php` — 同上：写入新密码哈希和 `$sys_userint` 后调用 `opcache_invalidate()`
+- 不修复时，启用 OPcache 的用户在登录成功或修改密码后会立即看到"Session expired, please login again"（第一个请求读取到的是缓存的旧配置）
+
+**修改文件：**
+- `adm/login.php` — `file_put_contents()` 后增加 `opcache_invalidate()`（第 140-143 行）
+- `adm/pwd.php` — `file_put_contents()` 后增加 `opcache_invalidate()`（第 43-45 行）
+
 ## [1.5.1] - 2026-06-23
 
 ### Fixed: Friend Links Security — added `rel="noopener"`
