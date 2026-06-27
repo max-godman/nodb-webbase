@@ -136,8 +136,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             "\$sys_userint = '" . $newUserint . "';",
                             $userConfigContent
                         );
-                        @file_put_contents($userConfigFile, $userConfigContent, LOCK_EX);
+                    @file_put_contents($userConfigFile, $userConfigContent, LOCK_EX);
+                    if (function_exists('opcache_invalidate')) {
+                        opcache_invalidate($userConfigFile, true);
                     }
+                }
 
                     // Set cookies
                     $cookieExpire = $saveLogin ? time() + 86400 * 30 : 0;

@@ -39,6 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     . "\$sys_userlevel = " . intval($sys_userlevel) . ";\n"
                     . "?>";
                 if (file_put_contents($userConfigFile, $cfgContent, LOCK_EX) !== false) {
+                    if (function_exists('opcache_invalidate')) {
+                        opcache_invalidate($userConfigFile, true);
+                    }
                     writeSysLog(1, $authUserid . ' changed password');
                     setcookie('userid', '', time() - 3600, '/');
                     setcookie('userint', '', time() - 3600, '/');
