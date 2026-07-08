@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userid = isset($_POST['userid']) ? trim($_POST['userid']) : '';
     $userdomain = isset($_POST['userdomain']) ? trim($_POST['userdomain']) : '';
     $siteLanguage = isset($_POST['site_language']) ? trim($_POST['site_language']) : '';
+    $admDir = isset($_POST['adm_dir']) ? trim($_POST['adm_dir']) : '';
     
     // Fixed values
     $siteName = 'NoDB-WebBase';
@@ -72,6 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Username can only contain letters, numbers and underscores';
     } elseif (strlen($userid) < 3 || strlen($userid) > 20) {
         $error = 'Username length must be 3-20 characters';
+    } elseif (empty($admDir)) {
+        $error = 'Please enter admin directory name';
+    } elseif (!preg_match('/^[a-zA-Z][a-zA-Z0-9_-]*$/', $admDir)) {
+        $error = 'Admin directory name can only contain letters, numbers, hyphens and underscores';
     } else {
         // Generate account data
         $tdayShort = getTdayShort();  // 6-digit yymmdd
@@ -83,12 +88,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Process domain
         $userdomain = getRootDomain($userdomain);
         
-        // Define config file paths
+        // Handle admin directory
+        if ($admDir !== 'adm') {
+            if (file_exists(__DIR__ . '/' . $admDir)) {
+                $error = 'Admin directory "' . $admDir . '" already exists';
+            } elseif (!rename(__DIR__ . '/adm', __DIR__ . '/' . $admDir)) {
+                $error = 'Failed to rename admin directory, please check permissions';
+            }
+        }
+        
+        if (empty($error)) {
+            // Define config file paths
         $mainConfigFile = __DIR__ . '/inc/sys_admin.php';
         $userConfigFile = __DIR__ . '/inc/sys_admin_' . $userid . '.php';
         
         // Create main config file (sys_admin.php)
-        $mainConfig = generateMainConfig($userdomain, $userid);
+        $mainConfig = generateMainConfig($userdomain, $userid, $admDir);
         
         // Write main config file
         if (file_put_contents($mainConfigFile, $mainConfig) === false) {
@@ -109,18 +124,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $logMsg = "Super admin account {$userid} created successfully";
                     writeSysLog(0, $logMsg);
-                    header('Location: adm/login.php');
+                    header('Location: ' . $admDir . '/login.php');
                     exit;
                 }
             }
         }
+        } // end if (empty($error))
     }
 }
 
 /**
  * Generate main config file content
  */
-function generateMainConfig($userdomain, $userid) {
+function generateMainConfig($userdomain, $userid, $admDir = 'adm') {
     $content = "<?php\n";
     $content .= "/**\n";
     $content .= " * System Admin Main Configuration File\n";
@@ -133,6 +149,8 @@ function generateMainConfig($userdomain, $userid) {
     $content .= " */\n\n";
     $content .= "// Admin bound domain\n";
     $content .= "\$sys_userdomain = " . var_export($userdomain, true) . ";\n\n";
+    $content .= "// Admin directory name\n";
+    $content .= "\$sys_adm_dir = " . var_export($admDir, true) . ";\n\n";
     $content .= "// Admin account list\n";
     $content .= "// Format: array('admin', 'user1', 'user2', ...)\n";
     $content .= "\$sys_useradmin = array(\n";
@@ -368,6 +386,15 @@ $defaultDomain = getRootDomain($defaultDomain);
                     <input type="text" id="userdomain" name="userdomain" 
                            value="<?php echo isset($_POST['userdomain']) ? htmlspecialchars($_POST['userdomain']) : htmlspecialchars($defaultDomain); ?>" 
                            required placeholder="e.g. example.com">
+                </div>
+                <div class="form-group">
+                    <label for="adm_dir">
+                        Admin Directory
+                        <span>(alphanumeric, default: adm)</span>
+                    </label>
+                    <input type="text" id="adm_dir" name="adm_dir" placeholder="e.g. admin"
+                           value="<?php echo isset($_POST['adm_dir']) ? htmlspecialchars($_POST['adm_dir']) : 'adm'; ?>" 
+                           required pattern="[a-zA-Z][a-zA-Z0-9_-]*">
                 </div>
             </div>
             <div class="section">
