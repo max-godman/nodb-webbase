@@ -76,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $adminFile = __DIR__ . '/../inc/sys_admin.php';
             $adminContent = "<?php\n"
                 . "\$sys_userdomain = " . var_export($newDomain, true) . ";\n"
+                . "\$sys_adm_dir = " . var_export($sys_adm_dir, true) . ";\n"
                 . "\$sys_useradmin = " . var_export($sys_useradmin, true) . ";\n"
                 . "\$sys_setup_time = " . var_export($sys_setup_time, true) . ";\n"
                 . "?>";
@@ -363,6 +364,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $adminFile = __DIR__ . '/../inc/sys_admin.php';
         $adminContent = "<?php\n"
             . "\$sys_userdomain = " . var_export($sys_userdomain, true) . ";\n"
+            . "\$sys_adm_dir = " . var_export($sys_adm_dir, true) . ";\n"
             . "\$sys_useradmin = " . var_export(array_values($updatedUseradmin), true) . ";\n"
             . "\$sys_setup_time = " . var_export($sys_setup_time, true) . ";\n"
             . "?>";
@@ -820,6 +822,15 @@ include '../tpl/adm_head.log';
             </div>
             <button type="submit" class="btn btn-primary" onclick="return confirm('Confirm change domain?')">Save</button>
         </form>
+    </div>
+    <div class="card">
+        <div class="card-title">Admin Directory</div>
+        <table>
+            <tr><td data-label="Item">Directory</td><td data-label="Value"><?php echo htmlspecialchars($sys_adm_dir ?? 'adm', ENT_QUOTES, 'UTF-8'); ?></td></tr>
+        </table>
+        <p class="text-muted mt-1" style="font-size:0.8rem;color:#856404;background:#fff3cd;padding:10px 14px;border-radius:var(--radius);border:1px solid #ffeeba;">
+            To change: rename the directory on the server, then update <code>$sys_adm_dir</code> in <code>inc/sys_admin.php</code>.
+        </p>
     </div>
     <?php break;
 
