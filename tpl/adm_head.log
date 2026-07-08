@@ -15,7 +15,8 @@
 // Calculate base path
 $tplDir = dirname(__FILE__);
 $basePath = dirname($tplDir); // NoDB-WebBase root
-$admPath = $basePath . '/adm/';
+$admDir = isset($sys_adm_dir) ? $sys_adm_dir : 'adm';
+$admPath = $basePath . '/' . $admDir . '/';
 $menuFile = $admPath . 'inc_menu.log';
 ?>
 <!DOCTYPE html>
